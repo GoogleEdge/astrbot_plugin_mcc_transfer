@@ -116,7 +116,7 @@ class MCPSettings:
     auth_mode: str = "auto"
     subscribe_ack: bool = False
     poll_interval: float = 2.0
-    chat_tool: str = "mcc_recent_events"
+    chat_tool: str = "mcc_chat_history"
     chat_max_count: int = 50
     reconnect_initial_delay: float = 1.0
     reconnect_max_delay: float = 30.0
@@ -325,7 +325,7 @@ class AppConfig:
                 auth_mode=str(m.get("auth_mode", "auto")).strip().casefold(),
                 subscribe_ack=_bool(m.get("subscribe_ack", False)),
                 poll_interval=_float(m.get("poll_interval", 2), 2),
-                chat_tool=str(m.get("chat_tool", "mcc_recent_events")).strip(),
+                chat_tool=str(m.get("chat_tool", "mcc_chat_history")).strip(),
                 chat_max_count=_int(m.get("chat_max_count", 50), 50),
                 reconnect_initial_delay=_float(m.get("reconnect_initial_delay", 1), 1),
                 reconnect_max_delay=_float(m.get("reconnect_max_delay", 30), 30),

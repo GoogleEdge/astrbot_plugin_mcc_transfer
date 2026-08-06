@@ -11,7 +11,7 @@
       "auth_mode": {"type": "string", "description": "认证模式：auto 空密码跳过、required 必须认证、none 不认证", "default": "auto", "options": ["auto", "required", "none"]},
       "subscribe_ack": {"type": "bool", "description": "旧版 WebSocket 是否等待订阅确认", "default": false},
       "poll_interval": {"type": "float", "description": "HTTP MCP 聊天事件轮询间隔（秒）", "default": 2.0},
-      "chat_tool": {"type": "string", "description": "HTTP MCP 获取聊天/事件的工具名", "default": "mcc_recent_events"},
+      "chat_tool": {"type": "string", "description": "HTTP MCP 获取聊天记录的工具名", "default": "mcc_chat_history"},
       "chat_max_count": {"type": "int", "description": "每次获取的最大事件数", "default": 50},
       "reconnect_initial_delay": {"type": "float", "description": "初始重连延迟（秒）", "default": 1.0},
       "reconnect_max_delay": {"type": "float", "description": "最大重连延迟（秒）", "default": 30.0},

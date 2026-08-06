@@ -6,7 +6,7 @@ AstrBot 主动消息 API 转发到 QQ 群。旧式 WebSocket `PlayerMessage` pro
 
 ## 特性
 
-- HTTP MCP JSON-RPC initialize/session/tool-call，默认轮询 `mcc_recent_events`
+- HTTP MCP JSON-RPC initialize/session/tool-call，默认轮询 `mcc_chat_history`
 - 旧式 WebSocket JSON auth、`PlayerMessage` 订阅与断线指数退避重连
 - 固定顺序过滤：Bot、系统/加入/退出/死亡/进度、公告、命令、黑白名单、关键词、正则、空消息、去重
 - 失败消息持久化和指数退避重试
@@ -38,7 +38,7 @@ powershell -NoProfile -Command "python -m pip install -r requirements.txt"
 transport = http
 url = http://127.0.0.1:33333/mcp
 poll_interval = 2
-chat_tool = mcc_recent_events
+chat_tool = mcc_chat_history
 chat_max_count = 50
 
 [target]

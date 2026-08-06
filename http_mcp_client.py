@@ -26,7 +26,7 @@ class HTTPMCPClient:
         *,
         timeout: float = 10.0,
         poll_interval: float = 2.0,
-        chat_tool: str = "mcc_recent_events",
+        chat_tool: str = "mcc_chat_history",
         chat_max_count: int = 50,
         on_message: Callable[..., Any] | None = None,
         on_state: Callable[[str, Mapping[str, Any]], Any] | None = None,
@@ -161,7 +161,7 @@ class HTTPMCPClient:
     @classmethod
     def _events_from_result(cls, result: Any) -> list[Mapping[str, Any]]:
         if isinstance(result, Mapping):
-            for key in ("events", "items", "recentEvents"):
+            for key in ("events", "entries", "items", "recentEvents"):
                 value = result.get(key)
                 if isinstance(value, list):
                     return [item for item in value if isinstance(item, Mapping)]
@@ -203,10 +203,10 @@ class HTTPMCPClient:
         return None
 
     async def poll_once(self) -> int:
-        result = await self.call_tool(
-            self.chat_tool,
-            {"afterId": self._last_event_id, "maxCount": self.chat_max_count},
-        )
+        arguments = {"maxCount": self.chat_max_count}
+        if self.chat_tool == "mcc_recent_events":
+            arguments["afterId"] = self._last_event_id
+        result = await self.call_tool(self.chat_tool, arguments)
         count = 0
         for event in self._events_from_result(result):
             event_id = event.get("id", event.get("eventId"))

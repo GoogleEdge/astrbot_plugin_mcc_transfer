@@ -109,7 +109,7 @@ class PluginRuntime:
                         str(self._value(client_config, "url", "http://127.0.0.1:33333/mcp")),
                         timeout=float(self._value(client_config, "connect_timeout", 10)),
                         poll_interval=float(self._value(client_config, "poll_interval", 2)),
-                        chat_tool=str(self._value(client_config, "chat_tool", "mcc_recent_events")),
+                        chat_tool=str(self._value(client_config, "chat_tool", "mcc_chat_history")),
                         chat_max_count=int(self._value(client_config, "chat_max_count", 50)),
                         on_message=self._on_http_event,
                         on_state=self._on_mcp_state,

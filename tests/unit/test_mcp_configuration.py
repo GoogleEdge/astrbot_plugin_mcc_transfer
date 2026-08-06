@@ -6,7 +6,7 @@ def test_http_mcp_defaults_match_current_mcc_endpoint():
 
     assert config.mcp.transport == "http"
     assert config.mcp.url == "http://127.0.0.1:33333/mcp"
-    assert config.mcp.chat_tool == "mcc_recent_events"
+    assert config.mcp.chat_tool == "mcc_chat_history"
 
 
 def test_required_auth_rejects_blank_password():
