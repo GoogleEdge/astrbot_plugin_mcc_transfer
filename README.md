@@ -48,12 +48,26 @@ message_template = [Minecraft] <{sender}> {message}
 ```
 
 本插件支持 AstrBot 的 QQ 官方渠道（`qq_official`）和 OneBot v11（`aiocqhttp`）。
-QQ 官方群目标填写群 `openid`；如果转发到频道场景，则填写 `channel_id`。
-OneBot v11 才填写数字群号。`platform_instance` 仅用于自定义模板，原生 UMO 由
-适配层按 AstrBot v4.26.8 的格式构造为
-`platform:message_type:group_id`，例如
-`qq_official:GroupMessage:<group_openid>`。如使用旧版或自定义适配器，可通过
-`umo_template` 或 `umo_override` 覆盖。
+QQ 官方群目标通常填写群 `openid`；如果转发到频道场景，则填写 `channel_id`。
+如果你手里没有 openid，只有 AstrBot 显示的 `uid`、`session_id` 或完整 `umo`，
+优先直接填写完整 `umo`，不要把 `uid` 猜成群号。配置方式如下：
+
+```ini
+platform_name = qq_official
+message_type = GroupMessage
+; 没有 group openid 时留空
+group_id =
+; 把 AstrBot 事件/会话中显示的完整 UMO 原样粘贴到这里
+umo_override = qq_official:GroupMessage:你的session_id
+```
+
+如果 WebUI 配置项中直接有 `umo` 字段，也可以把完整 UMO 填到 `umo`；插件会将
+它当作 `umo_override` 使用。`umo_override` 会原样传给 `context.send_message`，
+因此它优先级最高。
+如果只有 `session_id` 而没有完整 UMO，可按 AstrBot v4.26.8 的格式组成
+`qq_official:GroupMessage:<session_id>`；但必须确认该 session 是群或频道会话，
+不能使用个人用户的 `uid`。OneBot v11 才填写数字群号。`platform_instance` 仅用于
+自定义模板，原生 UMO 由适配层按 `platform:message_type:group_id` 构造。
 
 MCC 字段名可能随版本变化。`[protocol]` 和 `[parser]` 中的 JSON 路径/模板可以
 修改认证、订阅、事件 payload 及 sender/message/kind/timestamp 字段，不需要修改

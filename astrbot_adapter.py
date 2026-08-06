@@ -65,9 +65,13 @@ def resolve_target(
     """
 
     get = target.get if hasattr(target, "get") else lambda key, default=None: getattr(target, key, default)
-    group_id = str(get("group_id", "")).strip()
-    if not group_id:
-        raise TargetResolutionError("target.group_id is required")
+    group_id = str(get("group_id", "") or "").strip()
+    # AstrBot can provide a complete UMO without exposing the underlying group
+    # openid. In that case the UMO is the authoritative target identifier.
+    umo_override = get("umo_override", get("umo", None))
+    umo_override = str(umo_override).strip() if umo_override else None
+    if not group_id and not umo_override:
+        raise TargetResolutionError("target.group_id or target.umo_override is required")
 
     platform_name = str(get("platform_name", "qq_official") or "qq_official").strip()
     instance = str(get("platform_instance", "default") or "default").strip()
@@ -87,8 +91,6 @@ def resolve_target(
     message_type = str(get("message_type", "GroupMessage") or "GroupMessage").strip()
     template = get("umo_template", None)
     template = str(template).strip() if template else None
-    umo_override = get("umo_override", None)
-    umo_override = str(umo_override).strip() if umo_override else None
     if not umo_override:
         umo_override = build_umo(
             platform_name=platform_name,

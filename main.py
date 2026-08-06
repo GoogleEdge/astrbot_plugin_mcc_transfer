@@ -89,13 +89,16 @@ class MCCTransferPlugin(Star):
         if target is None:
             return False
         get = target.get if hasattr(target, "get") else lambda key, default=None: getattr(target, key, default)
-        return bool(str(get("group_id", "") or "").strip() or str(get("umo_override", "") or "").strip())
+        return bool(
+            str(get("group_id", "") or "").strip()
+            or str(get("umo_override", get("umo", "")) or "").strip()
+        )
 
     @filter.on_astrbot_loaded()
     async def on_astrbot_loaded(self, event: AstrMessageEvent | None = None) -> None:
         if not self._has_configured_target(self.runtime.config):
             astrbot_logger.warning(
-                "MCC transfer is inactive: configure target.group_id (or target.umo_override) "
+                "MCC transfer is inactive: configure target.group_id, target.umo_override, or target.umo "
                 "in the plugin settings, then reload the plugin"
             )
             return

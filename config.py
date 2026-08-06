@@ -323,7 +323,7 @@ class AppConfig:
                 message_type=str(t.get("message_type", "GroupMessage")).strip(),
                 group_id=str(t.get("group_id", "")).strip(),
                 umo_template=str(t.get("umo_template", "") or "").strip(),
-                umo_override=str(t.get("umo_override", "") or "").strip(),
+                umo_override=str(t.get("umo_override", t.get("umo", "")) or "").strip(),
                 message_template=str(t.get("message_template", "[Minecraft] <{sender}> {message}")),
             ),
             filter=FilterSettings(

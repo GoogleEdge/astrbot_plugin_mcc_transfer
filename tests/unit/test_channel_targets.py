@@ -32,6 +32,31 @@ def test_custom_umo_template_can_include_instance():
     assert target.umo == "aiocqhttp:bot-1:GroupMessage:123456"
 
 
+def test_full_umo_can_replace_missing_group_id():
+    target = resolve_target(
+        {
+            "platform_name": "qq_official",
+            "group_id": "",
+            "umo_override": "qq_official:GroupMessage:session-123",
+        }
+    )
+    assert target.group_id == ""
+    assert target.umo == "qq_official:GroupMessage:session-123"
+
+
+def test_umo_alias_can_replace_missing_group_id():
+    config = AppConfig.from_mapping(
+        {
+            "target": {
+                "umo": "qq_official:GroupMessage:session-456",
+            }
+        }
+    )
+
+    assert config.target.group_id == ""
+    assert config.target.umo_override == "qq_official:GroupMessage:session-456"
+
+
 def test_app_config_defaults_to_qq_official():
     config = AppConfig.from_mapping({}, require_target=False)
 
