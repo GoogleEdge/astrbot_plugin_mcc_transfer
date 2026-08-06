@@ -46,6 +46,7 @@ class AstrBotOpenAPISender:
         endpoint: str,
         *,
         api_key_env: str,
+        api_key: str = "",
         auth_header: str = "bearer",
         timeout: float = 10.0,
         environ: Mapping[str, str] | None = None,
@@ -61,14 +62,19 @@ class AstrBotOpenAPISender:
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", self.api_key_env):
             raise ValueError("OpenAPI api_key_env must be a valid environment variable name")
         self.endpoint = endpoint.rstrip("/")
+        self.api_key = str(api_key).strip()
         self.auth_header = auth_header
         self.timeout = max(0.1, float(timeout))
         self._environ = environ
 
     @property
-    def key_configured(self) -> bool:
+    def _environment_key(self) -> str:
         environment = self._environ if self._environ is not None else os.environ
-        return bool(str(environment.get(self.api_key_env, "")).strip())
+        return str(environment.get(self.api_key_env, "")).strip()
+
+    @property
+    def key_configured(self) -> bool:
+        return bool(self.api_key or self._environment_key())
 
     def diagnostics(self) -> dict[str, Any]:
         parsed = urlsplit(self.endpoint)
@@ -80,8 +86,7 @@ class AstrBotOpenAPISender:
         }
 
     def _key(self) -> str:
-        environment = self._environ if self._environ is not None else os.environ
-        key = str(environment.get(self.api_key_env, "")).strip()
+        key = self.api_key or self._environment_key
         if not key:
             raise AstrBotOpenAPIError(
                 f"OpenAPI API key is missing from environment variable {self.api_key_env}"

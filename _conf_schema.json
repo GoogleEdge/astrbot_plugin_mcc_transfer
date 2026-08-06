@@ -27,7 +27,8 @@
       "mode": {"type": "string", "description": "发送方式：native 或 openapi", "default": "native", "options": ["native", "openapi"]},
       "endpoint": {"type": "string", "description": "OpenAPI IM 地址；仅 openapi 模式使用", "default": "http://127.0.0.1:6185/api/v1/im/message"},
       "auth_header": {"type": "string", "description": "OpenAPI 认证头：bearer 或 x-api-key", "default": "bearer", "options": ["bearer", "x-api-key"]},
-      "api_key_env": {"type": "string", "description": "API key 所在环境变量名；不要把 key 直接写入配置或代码", "default": "ASTRBOT_MCC_TRANSFER_OPENAPI_KEY"},
+      "api_key_env": {"type": "string", "description": "API key 所在环境变量名；未填写 api_key 时使用", "default": "ASTRBOT_MCC_TRANSFER_OPENAPI_KEY"},
+      "api_key": {"type": "string", "description": "OpenAPI API key；仅在无法使用环境变量时填写，保存配置前请确认 AstrBot 配置权限", "default": ""},
       "timeout": {"type": "float", "description": "OpenAPI 请求超时（秒）", "default": 10.0}
     }
   },

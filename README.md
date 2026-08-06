@@ -44,8 +44,10 @@ powershell -NoProfile -Command "python -m pip install -r requirements.txt"
 {"umo":"qqbot:GroupMessage:<session>","message":"[Minecraft] <player> hello"}
 ```
 
-API key 只从 `sender.api_key_env` 指定的环境变量读取，默认变量名为
-`ASTRBOT_MCC_TRANSFER_OPENAPI_KEY`；不要把 key 写入配置、代码、日志或提交记录。认证头可选
+API key 默认从 `sender.api_key_env` 指定的环境变量读取，默认变量名为
+`ASTRBOT_MCC_TRANSFER_OPENAPI_KEY`。如果必须直接配置，也可以填写 `sender.api_key`；环境变量
+优先于配置字段。API key 不会写入状态文件、日志或错误信息，但明文配置仍可能被 AstrBot
+配置备份或有权限读取配置的人看到。认证头可选
 `Authorization: Bearer <key>` 或 `X-API-Key: <key>`。权限不足时 AstrBot 可能返回 `403`；
 插件将任意 HTTP 2xx 视为成功。OpenAPI 文档没有规定 QQ 群 UMO 的生成规则，因此应直接使用
 `target.umo_override` 中 `/sid` 显示的完整 UMO。实际部署若路径不同，可修改 endpoint。

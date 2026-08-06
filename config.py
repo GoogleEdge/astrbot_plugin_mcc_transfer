@@ -134,6 +134,7 @@ class SenderSettings:
     endpoint: str = "http://127.0.0.1:6185/api/v1/im/message"
     auth_header: str = "bearer"
     api_key_env: str = "ASTRBOT_MCC_TRANSFER_OPENAPI_KEY"
+    api_key: str = field(default="", repr=False, compare=False)
     timeout: float = 10.0
 
 
@@ -352,6 +353,7 @@ class AppConfig:
                 endpoint=str(sender.get("endpoint", "http://127.0.0.1:6185/api/v1/im/message")).strip(),
                 auth_header=str(sender.get("auth_header", "bearer")).strip().casefold(),
                 api_key_env=str(sender.get("api_key_env", "ASTRBOT_MCC_TRANSFER_OPENAPI_KEY")).strip(),
+                api_key=_env(sender.get("api_key", "")),
                 timeout=_float(sender.get("timeout", 10), 10),
             ),
             target=TargetSettings(
@@ -524,7 +526,12 @@ class AppConfig:
                 raise ConfigError(f"unknown message template field: {match.group(1)}")
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        """Return a serializable configuration without secret values."""
+        result = asdict(self)
+        sender = result.get("sender")
+        if isinstance(sender, dict):
+            sender.pop("api_key", None)
+        return result
 
 
 # Names used by integrations that prefer shorter settings labels.

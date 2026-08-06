@@ -18,6 +18,7 @@ def test_sender_openapi_settings_are_parsed_without_storing_key():
                 "endpoint": "http://127.0.0.1:6185/api/v1/im/message",
                 "api_key_env": "MY_OPENAPI_KEY",
                 "auth_header": "x-api-key",
+                "api_key": "direct-secret",
             },
             "target": {"umo_override": "qqbot:GroupMessage:session"},
         }
@@ -25,7 +26,9 @@ def test_sender_openapi_settings_are_parsed_without_storing_key():
 
     assert config.sender.mode == "openapi"
     assert config.sender.api_key_env == "MY_OPENAPI_KEY"
-    assert "secret" not in repr(config)
+    assert config.sender.api_key == "direct-secret"
+    assert "direct-secret" not in repr(config)
+    assert "direct-secret" not in str(config.to_dict())
     assert "api_key" not in config.to_dict()["sender"]
 
 

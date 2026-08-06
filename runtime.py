@@ -239,6 +239,7 @@ class PluginRuntime:
                 self.sender = AstrBotOpenAPISender(
                     str(self._value(sender_cfg, "endpoint", "http://127.0.0.1:6185/api/v1/im/message")),
                     api_key_env=str(self._value(sender_cfg, "api_key_env", "ASTRBOT_MCC_TRANSFER_OPENAPI_KEY")),
+                    api_key=str(self._value(sender_cfg, "api_key", "")),
                     auth_header=str(self._value(sender_cfg, "auth_header", "bearer")).casefold(),
                     timeout=float(self._value(sender_cfg, "timeout", 10)),
                 )

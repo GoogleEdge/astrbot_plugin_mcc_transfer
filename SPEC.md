@@ -200,11 +200,12 @@ reconnect_initial_delay = 1
 reconnect_max_delay = 30
 
 [sender]
-# native 使用 Context API；openapi 需要 AstrBot 4.18+ 和环境变量中的 API key
+# native 使用 Context API；openapi 需要 AstrBot 4.18+
 mode = native
 endpoint = http://127.0.0.1:6185/api/v1/im/message
 auth_header = bearer
 api_key_env = ASTRBOT_MCC_TRANSFER_OPENAPI_KEY
+api_key =
 timeout = 10
 
 [target]

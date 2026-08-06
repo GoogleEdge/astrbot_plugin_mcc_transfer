@@ -57,6 +57,28 @@ async def test_openapi_sender_posts_exact_umo_and_auth(auth_header):
 
 
 @pytest.mark.asyncio
+async def test_openapi_sender_accepts_direct_configured_key():
+    _Handler.status = 204
+    _Handler.payload = None
+    _Handler.headers = None
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        sender = AstrBotOpenAPISender(
+            f"http://127.0.0.1:{server.server_port}/api/v1/im/message",
+            api_key_env="MISSING_OPENAPI_KEY",
+            api_key="direct-secret",
+            environ={},
+        )
+        await sender.send("hello", "qqbot:GroupMessage:session-123")
+        assert _Handler.headers["Authorization"] == "Bearer direct-secret"
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+
+
+@pytest.mark.asyncio
 async def test_openapi_sender_hides_remote_error_body():
     _Handler.status = 403
     _Handler.payload = None
@@ -93,6 +115,7 @@ def test_openapi_sender_diagnostics_are_redacted():
     sender = AstrBotOpenAPISender(
         "http://127.0.0.1:6185/api/v1/im/message",
         api_key_env="TEST_OPENAPI_KEY",
+        api_key="direct-secret",
         environ={"TEST_OPENAPI_KEY": "test-secret"},
     )
 
@@ -103,4 +126,5 @@ def test_openapi_sender_diagnostics_are_redacted():
         "auth_header": "bearer",
         "key_configured": True,
     }
+    assert "direct-secret" not in json.dumps(diagnostics)
     assert "test-secret" not in json.dumps(diagnostics)
