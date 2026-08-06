@@ -220,8 +220,11 @@ class HTTPMCPClient:
                 continue
             try:
                 callback_result = self.on_message(parsed[0], parsed[1], event)
-            except TypeError:
-                callback_result = self.on_message(event)
+            except TypeError as exc:
+                try:
+                    callback_result = self.on_message(event)
+                except TypeError:
+                    raise exc
             if asyncio.iscoroutine(callback_result):
                 await callback_result
             count += 1

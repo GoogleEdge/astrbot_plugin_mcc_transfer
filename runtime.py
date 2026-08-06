@@ -152,11 +152,23 @@ class PluginRuntime:
                 LOGGER.exception("MCC transfer runtime failed to start")
                 raise
 
-    async def _on_http_event(self, event: Mapping[str, Any]) -> None:
-        sender = str(event.get("player", event.get("sender", event.get("username", "MCC"))))
-        message = str(event.get("message", event.get("text", event.get("content", ""))))
-        if message:
-            await self._on_mcp_message(sender, message, event)
+    async def _on_http_event(
+        self,
+        sender: str | Mapping[str, Any],
+        message: str | None = None,
+        raw: Mapping[str, Any] | None = None,
+    ) -> None:
+        if isinstance(sender, Mapping):
+            event = sender
+            actual_sender = str(event.get("player", event.get("sender", event.get("username", "MCC"))))
+            actual_message = str(event.get("message", event.get("text", event.get("content", ""))))
+            actual_raw = event
+        else:
+            actual_sender = sender
+            actual_message = str(message or "")
+            actual_raw = raw or {}
+        if actual_message:
+            await self._on_mcp_message(actual_sender, actual_message, actual_raw)
 
     async def _on_mcp_state(self, state: str, details: Mapping[str, Any]) -> None:
         self.status.lifecycle_state = state
