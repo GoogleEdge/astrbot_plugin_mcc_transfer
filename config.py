@@ -258,7 +258,12 @@ class AppConfig:
     parser: ParserSettings = field(default_factory=ParserSettings)
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any] | "AppConfig" | None) -> "AppConfig":
+    def from_mapping(
+        cls,
+        value: Mapping[str, Any] | "AppConfig" | None,
+        *,
+        require_target: bool = True,
+    ) -> "AppConfig":
         if isinstance(value, cls):
             return value
         root = dict(value or {})
@@ -389,7 +394,7 @@ class AppConfig:
                 require_event_marker=_bool(q.get("require_event_marker", False)),
             ),
         )
-        result.validate()
+        result.validate(require_target=require_target)
         return result
 
     @classmethod
@@ -407,7 +412,7 @@ class AppConfig:
                     current[key] = value
         return cls.from_mapping(sections)
 
-    def validate(self) -> None:
+    def validate(self, *, require_target: bool = True) -> None:
         if not self.mcp.host:
             raise ConfigError("mcp.host is required")
         if not 1 <= self.mcp.port <= 65535:
@@ -423,7 +428,7 @@ class AppConfig:
                 raise ConfigError(f"mcp.{name} must be non-negative")
         if self.mcp.reconnect_max_delay < self.mcp.reconnect_initial_delay:
             raise ConfigError("mcp.reconnect_max_delay must be >= reconnect_initial_delay")
-        if not self.target.group_id and not self.target.umo_override:
+        if require_target and not self.target.group_id and not self.target.umo_override:
             raise ConfigError("target.group_id is required")
         if self.target.message_type == "":
             raise ConfigError("target.message_type is required")

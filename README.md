@@ -24,7 +24,8 @@ powershell -NoProfile -Command "python -m pip install -r requirements.txt"
 重载插件后，在 AstrBot WebUI 中填写 `_conf_schema.json` 暴露的设置。AstrBot
 原生部署以注入的 `AstrBotConfig` 为准，不会自动读取仓库中的 `config.ini`。
 运行状态默认保存到 AstrBot 数据目录的
-`plugin_data/astrbot_plugin_mcc_transfer/`。
+`plugin_data/astrbot_plugin_mcc_transfer/`。首次安装时 `target.group_id` 可以留空，
+插件会保持未启用状态；安装完成后在插件配置页填写群号并重载插件即可开始转发。
 
 ## 配置
 

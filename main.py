@@ -74,12 +74,31 @@ class MCCTransferPlugin(Star):
         self.config = config or AstrBotConfig()
         normalized = self.config
         if AppConfig is not None and hasattr(AppConfig, "from_mapping"):
-            normalized = AppConfig.from_mapping(self.config)
+            # AstrBot instantiates the plugin before the user can fill in its
+            # WebUI configuration. Keep structural validation here, then let
+            # runtime startup enforce that a forwarding target is configured.
+            normalized = AppConfig.from_mapping(self.config, require_target=False)
         data_root = Path(get_astrbot_data_path()) / "plugin_data" / "astrbot_plugin_mcc_transfer"
         self.runtime = PluginRuntime(normalized, context=context, data_dir=data_root)
 
+    @staticmethod
+    def _has_configured_target(config: Any) -> bool:
+        target = getattr(config, "target", None)
+        if target is None and hasattr(config, "get"):
+            target = config.get("target", config)
+        if target is None:
+            return False
+        get = target.get if hasattr(target, "get") else lambda key, default=None: getattr(target, key, default)
+        return bool(str(get("group_id", "") or "").strip() or str(get("umo_override", "") or "").strip())
+
     @filter.on_astrbot_loaded()
     async def on_astrbot_loaded(self, event: AstrMessageEvent | None = None) -> None:
+        if not self._has_configured_target(self.runtime.config):
+            astrbot_logger.warning(
+                "MCC transfer is inactive: configure target.group_id (or target.umo_override) "
+                "in the plugin settings, then reload the plugin"
+            )
+            return
         await self.runtime.start()
 
     async def terminate(self) -> None:
