@@ -15,12 +15,12 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any
 
-try:  # The repository keeps the domain models at its root.
+try:
+    from .models import MessageKind, ParsedMessage
+    from .protocol import PathSpec, get_path
+except ImportError:  # pragma: no cover - standalone fallback
     from models import MessageKind, ParsedMessage
-except ImportError:  # pragma: no cover - useful when vendored as a package
-    from .models import MessageKind, ParsedMessage  # type: ignore[no-redef]
-
-from protocol import PathSpec, get_path
+    from protocol import PathSpec, get_path
 
 _MISSING = object()
 

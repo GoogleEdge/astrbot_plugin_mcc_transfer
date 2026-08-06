@@ -27,15 +27,26 @@ except ImportError:  # pragma: no cover - import error is raised on connect
     class WebSocketException(Exception):
         pass
 
-from models import ParsedMessage
-from parser import MessageParser, ParserConfig
-from protocol import (
-    ProtocolAuthenticationError,
-    ProtocolConfig,
-    ProtocolDecodeError,
-    decode_frame,
-    encode_frame,
-)
+try:
+    from .models import ParsedMessage
+    from .parser import MessageParser, ParserConfig
+    from .protocol import (
+        ProtocolAuthenticationError,
+        ProtocolConfig,
+        ProtocolDecodeError,
+        decode_frame,
+        encode_frame,
+    )
+except ImportError:  # pragma: no cover - standalone fallback
+    from models import ParsedMessage
+    from parser import MessageParser, ParserConfig
+    from protocol import (
+        ProtocolAuthenticationError,
+        ProtocolConfig,
+        ProtocolDecodeError,
+        decode_frame,
+        encode_frame,
+    )
 
 MessageCallback: TypeAlias = Callable[..., Any]
 

@@ -10,16 +10,24 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from astrbot_adapter import AstrBotSender, resolve_target
-from delivery import DeliveryPipeline
-from filter_chain import FilterChain
-from models import RuntimeStatus
-from persistence import DedupStore, RetryQueue
-
 try:
-    from mcp_client import MCPClient
-except ImportError:  # pragma: no cover - protects partial installs during development
-    MCPClient = None  # type: ignore[assignment,misc]
+    from .astrbot_adapter import AstrBotSender, resolve_target
+    from .delivery import DeliveryPipeline
+    from .filter_chain import FilterChain
+    from .mcp_client import MCPClient
+    from .models import RuntimeStatus
+    from .persistence import DedupStore, RetryQueue
+except ImportError:  # pragma: no cover - standalone fallback
+    from astrbot_adapter import AstrBotSender, resolve_target
+    from delivery import DeliveryPipeline
+    from filter_chain import FilterChain
+    from models import RuntimeStatus
+    from persistence import DedupStore, RetryQueue
+
+    try:
+        from mcp_client import MCPClient
+    except ImportError:  # pragma: no cover - protects partial installs during development
+        MCPClient = None  # type: ignore[assignment,misc]
 
 LOGGER = logging.getLogger(__name__)
 

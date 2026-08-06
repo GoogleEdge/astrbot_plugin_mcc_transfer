@@ -6,7 +6,10 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from runtime import PluginRuntime
+try:
+    from .runtime import PluginRuntime
+except ImportError:  # pragma: no cover - standalone fallback
+    from runtime import PluginRuntime
 
 LOGGER = logging.getLogger(__name__)
 
@@ -54,9 +57,12 @@ except ImportError:  # pragma: no cover - standalone fallback
         return str(Path("data"))
 
 try:
-    from config import AppConfig
-except ImportError:  # pragma: no cover - partial install fallback
-    AppConfig = None  # type: ignore[assignment,misc]
+    from .config import AppConfig
+except ImportError:  # pragma: no cover - standalone fallback
+    try:
+        from config import AppConfig
+    except ImportError:  # pragma: no cover - partial install fallback
+        AppConfig = None  # type: ignore[assignment,misc]
 
 
 @register("astrbot_plugin_mcc_transfer", "MCC Transfer", "Deterministic MCC chat forwarding", "1.0.0")

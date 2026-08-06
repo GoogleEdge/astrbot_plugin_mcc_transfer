@@ -11,7 +11,10 @@ import logging
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
-from models import TargetRef
+try:
+    from .models import TargetRef
+except ImportError:  # pragma: no cover - standalone fallback
+    from models import TargetRef
 
 LOGGER = logging.getLogger(__name__)
 
