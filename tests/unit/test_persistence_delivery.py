@@ -27,7 +27,7 @@ async def test_dedup_persists_and_delivery_sends(tmp_path: Path):
     )
     result = await pipeline.handle_raw("Alex", "hello", {"event": "PlayerMessage", "type": "event"})
     assert result.sent
-    assert sender.sent == [("aiocqhttp:default:GroupMessage:123", "[Alex] hello")]
+    assert sender.sent == [("qq_official:GroupMessage:123", "[Alex] hello")]
     duplicate = await pipeline.handle_raw("Alex", "hello", {"event": "PlayerMessage", "type": "event"})
     assert duplicate.filtered
     assert duplicate.reason == "duplicate_message"

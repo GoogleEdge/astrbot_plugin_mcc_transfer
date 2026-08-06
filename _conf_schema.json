@@ -17,11 +17,11 @@
     "type": "object",
     "description": "AstrBot 主动消息目标",
     "items": {
-      "platform_name": {"type": "string", "description": "平台适配器名称", "default": "aiocqhttp"},
-      "platform_instance": {"type": "string", "description": "平台实例 ID", "default": "default"},
-      "message_type": {"type": "string", "description": "消息类型", "default": "GroupMessage"},
-      "group_id": {"type": "string", "description": "目标 QQ 群号；安装后必须填写", "default": ""},
-      "umo_template": {"type": "string", "description": "统一消息来源模板", "default": "{platform_name}:{platform_instance}:{message_type}:{group_id}"},
+      "platform_name": {"type": "string", "description": "AstrBot 平台适配器名称；QQ 官方填写 qq_official，OneBot v11 填写 aiocqhttp", "default": "qq_official"},
+      "platform_instance": {"type": "string", "description": "平台实例 ID；仅自定义 UMO 模板使用，原生 UMO 不包含此字段", "default": "default"},
+      "message_type": {"type": "string", "description": "消息类型；群消息填写 GroupMessage", "default": "GroupMessage"},
+      "group_id": {"type": "string", "description": "QQ 官方填写群 openid（频道填写 channel_id）；OneBot 填写群号；安装后必须填写", "default": ""},
+      "umo_template": {"type": "string", "description": "可选自定义 UMO 模板；留空使用 platform:message_type:group_id", "default": ""},
       "umo_override": {"type": "string", "description": "完整 UMO 覆盖值（通常留空）", "default": ""},
       "message_template": {"type": "string", "description": "转发消息模板", "default": "[Minecraft] <{sender}> {message}"}
     }

@@ -31,10 +31,11 @@ def build_umo(
     group_id: str,
     template: str | None = None,
 ) -> str:
-    """Build the unified message origin used by AstrBot proactive sending.
+    """Build AstrBot's native UMO, or a configured custom template.
 
-    The default format is intentionally centralized here.  Deployments with a
-    custom AstrBot adapter can provide ``umo_template`` in configuration.
+    AstrBot v4.26.8 uses ``platform:type:session_id`` for MessageSession.  The
+    instance value remains available to custom/legacy templates, but native
+    QQ Official and OneBot targets must not include it.
     """
 
     values = {
@@ -43,7 +44,7 @@ def build_umo(
         "message_type": message_type,
         "group_id": str(group_id),
     }
-    pattern = template or "{platform_name}:{platform_instance}:{message_type}:{group_id}"
+    pattern = template or "{platform_name}:{message_type}:{group_id}"
     try:
         return pattern.format(**values)
     except KeyError as exc:
@@ -68,7 +69,7 @@ def resolve_target(
     if not group_id:
         raise TargetResolutionError("target.group_id is required")
 
-    platform_name = str(get("platform_name", "aiocqhttp") or "aiocqhttp").strip()
+    platform_name = str(get("platform_name", "qq_official") or "qq_official").strip()
     instance = str(get("platform_instance", "default") or "default").strip()
     if instance == "default" and available_platforms is not None:
         candidates = available_platforms.get(platform_name, ())

@@ -58,7 +58,7 @@ class ParsedMessage:
 @dataclass(frozen=True, slots=True)
 class TargetRef:
     group_id: str
-    platform_name: str = "aiocqhttp"
+    platform_name: str = "qq_official"
     platform_instance: str = "default"
     message_type: str = "GroupMessage"
     umo_override: str | None = None
@@ -67,7 +67,10 @@ class TargetRef:
     def umo(self) -> str:
         if self.umo_override:
             return self.umo_override
-        return f"{self.platform_name}:{self.platform_instance}:{self.message_type}:{self.group_id}"
+        # AstrBot v4.26.8 MessageSession uses platform:type:session_id.
+        # ``platform_instance`` is retained for legacy/custom templates but is
+        # not part of the native UMO.
+        return f"{self.platform_name}:{self.message_type}:{self.group_id}"
 
 
 @dataclass(frozen=True, slots=True)

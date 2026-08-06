@@ -118,11 +118,13 @@ class MCPSettings:
 
 @dataclass(frozen=True, slots=True)
 class TargetSettings:
-    platform_name: str = "aiocqhttp"
+    platform_name: str = "qq_official"
     platform_instance: str = "default"
     message_type: str = "GroupMessage"
     group_id: str = ""
-    umo_template: str = "{platform_name}:{platform_instance}:{message_type}:{group_id}"
+    # Empty means use AstrBot's native UMO format.  A custom template remains
+    # available for adapters with a project-specific session convention.
+    umo_template: str = ""
     umo_override: str = ""
     message_template: str = "[Minecraft] <{sender}> {message}"
 
@@ -130,6 +132,8 @@ class TargetSettings:
     def target_umo(self) -> str:
         if self.umo_override:
             return self.umo_override
+        if not self.umo_template:
+            return f"{self.platform_name}:{self.message_type}:{self.group_id}"
         return self.umo_template.format(
             platform_name=self.platform_name,
             platform_instance=self.platform_instance,
@@ -314,11 +318,11 @@ class AppConfig:
                 subscribe_timeout=_float(m.get("subscribe_timeout", 10), 10),
             ),
             target=TargetSettings(
-                platform_name=str(t.get("platform_name", "aiocqhttp")).strip(),
+                platform_name=str(t.get("platform_name", "qq_official")).strip(),
                 platform_instance=str(t.get("platform_instance", "default")).strip(),
                 message_type=str(t.get("message_type", "GroupMessage")).strip(),
                 group_id=str(t.get("group_id", "")).strip(),
-                umo_template=str(t.get("umo_template", "{platform_name}:{platform_instance}:{message_type}:{group_id}")),
+                umo_template=str(t.get("umo_template", "") or "").strip(),
                 umo_override=str(t.get("umo_override", "") or "").strip(),
                 message_template=str(t.get("message_template", "[Minecraft] <{sender}> {message}")),
             ),

@@ -6,4 +6,5 @@ version: 1.0.0
 author: Dev_GoogleEdge
 astrbot_version: ">=4.16,<5"
 support_platforms:
+  - qq_official
   - aiocqhttp

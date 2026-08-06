@@ -39,16 +39,21 @@ port = 25575
 password = your_secure_password
 
 [target]
-platform_name = aiocqhttp
+; QQ Official 使用 qq_official，并填写群 openid 或频道 channel_id
+platform_name = qq_official
 platform_instance = default
 message_type = GroupMessage
-group_id = 170543353
+group_id = your_group_openid
 message_template = [Minecraft] <{sender}> {message}
 ```
 
-`platform_instance=default` 只适合目标平台实例唯一的部署；多个实例时应填写明确
-的实例 ID。UMO 由适配层集中构造为
-`platform:instance:message_type:group_id`，也可配置 `umo_override`。
+本插件支持 AstrBot 的 QQ 官方渠道（`qq_official`）和 OneBot v11（`aiocqhttp`）。
+QQ 官方群目标填写群 `openid`；如果转发到频道场景，则填写 `channel_id`。
+OneBot v11 才填写数字群号。`platform_instance` 仅用于自定义模板，原生 UMO 由
+适配层按 AstrBot v4.26.8 的格式构造为
+`platform:message_type:group_id`，例如
+`qq_official:GroupMessage:<group_openid>`。如使用旧版或自定义适配器，可通过
+`umo_template` 或 `umo_override` 覆盖。
 
 MCC 字段名可能随版本变化。`[protocol]` 和 `[parser]` 中的 JSON 路径/模板可以
 修改认证、订阅、事件 payload 及 sender/message/kind/timestamp 字段，不需要修改
