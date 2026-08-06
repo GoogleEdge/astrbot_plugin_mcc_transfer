@@ -170,6 +170,32 @@ class HTTPMCPClient:
             return [item for item in result if isinstance(item, Mapping)]
         return []
 
+    @staticmethod
+    def _event_message(event: Mapping[str, Any]) -> tuple[str, str] | None:
+        """Extract chat text from MCC recent-event envelopes."""
+        event_type = str(event.get("type", event.get("event", ""))).casefold()
+        data = event.get("data", {})
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError:
+                data = {"text": data}
+        if not isinstance(data, Mapping):
+            data = {}
+        if event_type in {"chat_public", "onchatpublic", "chat_private", "onchatprivate"}:
+            sender = str(data.get("sender", data.get("username", "MCC")))
+            message = str(data.get("message", data.get("text", "")))
+            return (sender, message) if message else None
+        if event_type in {"chat_raw", "onchatraw"}:
+            message = str(data.get("text", data.get("message", "")))
+            return ("MCC", message) if message else None
+        # Accept already-normalized/custom event records too.
+        sender = event.get("player", event.get("sender"))
+        message = event.get("message", event.get("text", event.get("content")))
+        if message is not None:
+            return str(sender or "MCC"), str(message)
+        return None
+
     async def poll_once(self) -> int:
         result = await self.call_tool(
             self.chat_tool,
@@ -183,9 +209,13 @@ class HTTPMCPClient:
                     self._last_event_id = max(self._last_event_id, int(event_id))
             except (TypeError, ValueError):
                 pass
-            if self.on_message is None:
+            parsed = self._event_message(event)
+            if parsed is None or self.on_message is None:
                 continue
-            callback_result = self.on_message(event)
+            try:
+                callback_result = self.on_message(parsed[0], parsed[1], event)
+            except TypeError:
+                callback_result = self.on_message(event)
             if asyncio.iscoroutine(callback_result):
                 await callback_result
             count += 1
