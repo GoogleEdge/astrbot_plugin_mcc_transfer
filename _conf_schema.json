@@ -1,0 +1,98 @@
+{
+  "mcp": {
+    "type": "object",
+    "description": "MCC MCP WebSocket connection",
+    "properties": {
+      "host": {"type": "string", "default": "127.0.0.1"},
+      "port": {"type": "integer", "default": 25575, "minimum": 1, "maximum": 65535},
+      "password": {"type": "string", "default": "", "format": "password"},
+      "reconnect_initial_delay": {"type": "number", "default": 1},
+      "reconnect_max_delay": {"type": "number", "default": 30},
+      "connect_timeout": {"type": "number", "default": 10},
+      "auth_timeout": {"type": "number", "default": 10},
+      "subscribe_timeout": {"type": "number", "default": 10}
+    }
+  },
+  "target": {
+    "type": "object",
+    "properties": {
+      "platform_name": {"type": "string", "default": "aiocqhttp"},
+      "platform_instance": {"type": "string", "default": "default"},
+      "message_type": {"type": "string", "default": "GroupMessage"},
+      "group_id": {"type": "string", "default": ""},
+      "umo_template": {"type": "string", "default": "{platform_name}:{platform_instance}:{message_type}:{group_id}"},
+      "umo_override": {"type": "string", "default": ""},
+      "message_template": {"type": "string", "default": "[Minecraft] <{sender}> {message}"}
+    }
+  },
+  "filter": {
+    "type": "object",
+    "properties": {
+      "enabled": {"type": "boolean", "default": true},
+      "ignore_bot_messages": {"type": "boolean", "default": true},
+      "bot_name": {"type": "string", "default": "MCCBot"},
+      "ignore_system_messages": {"type": "boolean", "default": true},
+      "ignore_join_messages": {"type": "boolean", "default": true},
+      "ignore_leave_messages": {"type": "boolean", "default": true},
+      "ignore_death_messages": {"type": "boolean", "default": true},
+      "ignore_advancement_messages": {"type": "boolean", "default": true},
+      "ignore_server_announcements": {"type": "boolean", "default": true},
+      "ignore_empty_messages": {"type": "boolean", "default": true},
+      "ignore_command_messages": {"type": "boolean", "default": true},
+      "command_prefixes": {"type": "array", "default": ["/", "!"]},
+      "enable_player_blacklist": {"type": "boolean", "default": false},
+      "blacklist_players": {"type": "array", "default": []},
+      "enable_player_whitelist": {"type": "boolean", "default": false},
+      "whitelist_players": {"type": "array", "default": []},
+      "enable_keyword_filter": {"type": "boolean", "default": false},
+      "blocked_keywords": {"type": "array", "default": []},
+      "keyword_case_sensitive": {"type": "boolean", "default": false},
+      "keyword_whole_word": {"type": "boolean", "default": false},
+      "enable_regex_filter": {"type": "boolean", "default": false},
+      "blocked_regex": {"type": "array", "default": []}
+    }
+  },
+  "dedup": {
+    "type": "object",
+    "properties": {
+      "enabled": {"type": "boolean", "default": true},
+      "cache_size": {"type": "integer", "default": 1000},
+      "ttl_seconds": {"type": "number", "default": 300},
+      "state_file": {"type": "string", "default": "data/dedup_cache.json"}
+    }
+  },
+  "retry": {
+    "type": "object",
+    "properties": {
+      "max_attempts": {"type": "integer", "default": 5},
+      "initial_delay_seconds": {"type": "number", "default": 1},
+      "max_delay_seconds": {"type": "number", "default": 30},
+      "queue_file": {"type": "string", "default": "data/failed_messages.json"},
+      "replay_failed_messages": {"type": "boolean", "default": true},
+      "max_queue_size": {"type": "integer", "default": 1000},
+      "drop_expired_messages": {"type": "boolean", "default": false},
+      "message_expire_seconds": {"type": "number", "default": 3600}
+    }
+  },
+  "security": {
+    "type": "object",
+    "properties": {
+      "max_message_length": {"type": "integer", "default": 500},
+      "rate_limit_per_second": {"type": "number", "default": 5},
+      "split_long_messages": {"type": "boolean", "default": true},
+      "merge_messages": {"type": "boolean", "default": false},
+      "merge_window_seconds": {"type": "number", "default": 3}
+    }
+  },
+  "logging": {
+    "type": "object",
+    "properties": {
+      "level": {"type": "string", "default": "INFO"},
+      "log_file": {"type": "string", "default": ""},
+      "max_bytes": {"type": "integer", "default": 10485760},
+      "backup_count": {"type": "integer", "default": 5}
+    }
+  },
+  "protocol": {"type": "object", "properties": {}},
+  "parser": {"type": "object", "properties": {}}
+}

@@ -1,0 +1,9 @@
+name: astrbot_plugin_mcc_transfer
+display_name: MCC 聊天转发插件
+desc: 通过 MCP 协议连接 MCC，将游戏聊天确定性地转发到 QQ 群
+short_desc: Minecraft 聊天转发到 QQ 群，零 LLM 调用
+version: 1.0.0
+author: Dev_GoogleEdge
+astrbot_version: ">=4.16,<5"
+support_platforms:
+  - aiocqhttp

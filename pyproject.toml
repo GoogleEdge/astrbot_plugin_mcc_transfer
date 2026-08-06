@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astrbot-plugin-mcc-transfer"
+version = "1.0.0"
+description = "Deterministic MCC chat forwarding plugin for AstrBot"
+requires-python = ">=3.11"
+dependencies = ["websockets>=12,<16"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = [".git", ".claude"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
