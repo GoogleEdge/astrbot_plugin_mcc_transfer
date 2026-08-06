@@ -94,15 +94,26 @@ class MCCTransferPlugin(Star):
             or str(get("umo_override", get("umo", "")) or "").strip()
         )
 
-    @filter.on_astrbot_loaded()
-    async def on_astrbot_loaded(self, event: AstrMessageEvent | None = None) -> None:
+    async def _start_if_configured(self) -> None:
         if not self._has_configured_target(self.runtime.config):
+            self.runtime.mark_inactive(
+                "configure target.group_id, target.umo_override, or target.umo in the plugin settings"
+            )
             astrbot_logger.warning(
                 "MCC transfer is inactive: configure target.group_id, target.umo_override, or target.umo "
                 "in the plugin settings, then reload the plugin"
             )
             return
         await self.runtime.start()
+
+    async def initialize(self) -> None:
+        """Start on every plugin load, including WebUI reloads."""
+        await self._start_if_configured()
+
+    @filter.on_astrbot_loaded()
+    async def on_astrbot_loaded(self, event: AstrMessageEvent | None = None) -> None:
+        # Compatibility fallback for hosts that do not call Star.initialize.
+        await self._start_if_configured()
 
     async def terminate(self) -> None:
         await self.runtime.stop()

@@ -8,7 +8,7 @@ SPEC.md — Minecraft 聊天转发插件（MCP 版）
 
 · 基于 MCP 协议：通过 WebSocket 连接 MCC 内置 MCP Server，实时接收聊天事件，非文件轮询。
 · 零 Token 消耗：所有解析、过滤、决策均由本地确定性代码完成，不调用任何 LLM 或外部推理 API。
-· AstrBot 原生集成：以插件形式运行，利用 AstrBot 的主动消息能力发送到 QQ 群。
+· AstrBot 原生集成：以插件形式运行，默认利用 AstrBot Context 的主动消息能力发送到 QQ 群；可选通过 AstrBot 4.18+ HTTP OpenAPI 发送。
 · 高度可配置：所有过滤规则独立开关，支持黑白名单、关键词、正则、消息类型过滤。
 · 高可靠性：支持断线重连、失败队列、指数退避重试，状态持久化。
 
@@ -189,7 +189,9 @@ support_platforms:
 
 ```ini
 [mcp]
-# MCC MCP Server 连接配置（WebSocket）
+# MCC MCP Server 连接配置；当前版本默认 HTTP MCP
+transport = http
+url = http://127.0.0.1:33333/mcp
 host = 127.0.0.1
 port = 25575
 password = your_secure_password
@@ -197,9 +199,18 @@ password = your_secure_password
 reconnect_initial_delay = 1
 reconnect_max_delay = 30
 
+[sender]
+# native 使用 Context API；openapi 需要 AstrBot 4.18+ 和环境变量中的 API key
+mode = native
+endpoint = http://127.0.0.1:6185/api/v1/im/message
+auth_header = bearer
+api_key_env = ASTRBOT_MCC_TRANSFER_OPENAPI_KEY
+timeout = 10
+
 [target]
-# 目标 QQ 群
+# 目标 QQ 群；完整 UMO 可通过 umo_override 原样指定
 group_id = 170543353
+umo_override =
 ; 消息模板
 message_template = [Minecraft] <{sender}> {message}
 

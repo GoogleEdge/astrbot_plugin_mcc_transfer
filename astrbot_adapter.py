@@ -6,10 +6,17 @@ module is the only place that knows how to build a proactive AstrBot message.
 
 from __future__ import annotations
 
+import asyncio
 import inspect
+import json
 import logging
+import os
+import re
+import socket
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
+from urllib import error, request
+from urllib.parse import urlsplit
 
 try:
     from .models import TargetRef
@@ -25,6 +32,91 @@ class TargetResolutionError(RuntimeError):
 
 class AstrBotDeliveryError(RuntimeError):
     """Raised when AstrBot explicitly rejects a proactive message."""
+
+
+class AstrBotOpenAPIError(RuntimeError):
+    """Raised when AstrBot's OpenAPI IM endpoint rejects a message."""
+
+
+class AstrBotOpenAPISender:
+    """Send proactive messages through AstrBot's local OpenAPI IM endpoint."""
+
+    def __init__(
+        self,
+        endpoint: str,
+        *,
+        api_key_env: str,
+        auth_header: str = "bearer",
+        timeout: float = 10.0,
+        environ: Mapping[str, str] | None = None,
+    ) -> None:
+        parsed = urlsplit(str(endpoint).strip())
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("OpenAPI endpoint must be an absolute http(s) URL")
+        if parsed.username or parsed.password or parsed.query or parsed.fragment:
+            raise ValueError("OpenAPI endpoint must not contain credentials, query, or fragment")
+        if auth_header not in {"bearer", "x-api-key"}:
+            raise ValueError("OpenAPI auth_header must be bearer or x-api-key")
+        self.api_key_env = str(api_key_env).strip()
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", self.api_key_env):
+            raise ValueError("OpenAPI api_key_env must be a valid environment variable name")
+        self.endpoint = endpoint.rstrip("/")
+        self.auth_header = auth_header
+        self.timeout = max(0.1, float(timeout))
+        self._environ = environ
+
+    @property
+    def key_configured(self) -> bool:
+        environment = self._environ if self._environ is not None else os.environ
+        return bool(str(environment.get(self.api_key_env, "")).strip())
+
+    def diagnostics(self) -> dict[str, Any]:
+        parsed = urlsplit(self.endpoint)
+        return {
+            "mode": "openapi",
+            "endpoint": f"{parsed.scheme}://{parsed.netloc}{parsed.path or '/'}",
+            "auth_header": self.auth_header,
+            "key_configured": self.key_configured,
+        }
+
+    def _key(self) -> str:
+        environment = self._environ if self._environ is not None else os.environ
+        key = str(environment.get(self.api_key_env, "")).strip()
+        if not key:
+            raise AstrBotOpenAPIError(
+                f"OpenAPI API key is missing from environment variable {self.api_key_env}"
+            )
+        return key
+
+    async def send(self, text: str, target_umo: str) -> None:
+        key = self._key()
+        payload = json.dumps({"umo": str(target_umo), "message": str(text)}, ensure_ascii=False).encode("utf-8")
+        if self.auth_header == "bearer":
+            auth_value = f"Bearer {key}"
+            headers = {"Authorization": auth_value}
+        else:
+            headers = {"X-API-Key": key}
+        headers.update({"Content-Type": "application/json", "Accept": "application/json"})
+
+        def post() -> int:
+            class _NoRedirect(request.HTTPRedirectHandler):
+                def redirect_request(self, req, fp, code, msg, headers, newurl):
+                    raise AstrBotOpenAPIError("OpenAPI endpoint returned a redirect")
+
+            opener = request.build_opener(_NoRedirect)
+            req = request.Request(self.endpoint, data=payload, headers=headers, method="POST")
+            try:
+                with opener.open(req, timeout=self.timeout) as response:
+                    response.read()
+                    return int(response.status)
+            except error.HTTPError as exc:
+                raise AstrBotOpenAPIError(f"OpenAPI IM request returned HTTP {exc.code}") from None
+            except (error.URLError, TimeoutError, OSError, socket.timeout) as exc:
+                raise AstrBotOpenAPIError(f"OpenAPI IM request failed: {type(exc).__name__}") from None
+
+        status = await asyncio.to_thread(post)
+        if status < 200 or status >= 300:
+            raise AstrBotOpenAPIError(f"OpenAPI IM request returned HTTP {status}")
 
 
 def build_umo(
@@ -186,3 +278,17 @@ async def discover_platform_instances(context: Any, platform_name: str) -> dict[
 
 
 Sender = Callable[[str, str], Awaitable[None]]
+
+
+__all__ = [
+    "AstrBotDeliveryError",
+    "AstrBotOpenAPIError",
+    "AstrBotOpenAPISender",
+    "AstrBotSender",
+    "NullSender",
+    "Sender",
+    "TargetResolutionError",
+    "build_umo",
+    "discover_platform_instances",
+    "resolve_target",
+]

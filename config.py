@@ -14,6 +14,7 @@ import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 
 
 class ConfigError(ValueError):
@@ -123,6 +124,17 @@ class MCPSettings:
     connect_timeout: float = 10.0
     auth_timeout: float = 10.0
     subscribe_timeout: float = 10.0
+
+
+@dataclass(frozen=True, slots=True)
+class SenderSettings:
+    """Outbound transport settings; secrets are resolved only at send time."""
+
+    mode: str = "native"
+    endpoint: str = "http://127.0.0.1:6185/api/v1/im/message"
+    auth_header: str = "bearer"
+    api_key_env: str = "ASTRBOT_MCC_TRANSFER_OPENAPI_KEY"
+    timeout: float = 10.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -261,6 +273,7 @@ class ParserSettings:
 @dataclass(frozen=True, slots=True)
 class AppConfig:
     mcp: MCPSettings = field(default_factory=MCPSettings)
+    sender: SenderSettings = field(default_factory=SenderSettings)
     target: TargetSettings = field(default_factory=TargetSettings)
     filter: FilterSettings = field(default_factory=FilterSettings)
     dedup: DedupSettings = field(default_factory=DedupSettings)
@@ -283,7 +296,7 @@ class AppConfig:
         # AstrBot can expose either nested section objects or a flat mapping;
         # accept both without silently treating unrelated values as settings.
         sections = {name: _section(root, name) for name in (
-            "mcp", "target", "filter", "dedup", "retry", "security", "logging", "protocol", "parser"
+            "mcp", "sender", "target", "filter", "dedup", "retry", "security", "logging", "protocol", "parser"
         )}
         for name in sections:
             if not sections[name]:
@@ -292,6 +305,7 @@ class AppConfig:
                     sections[name] = {key.split(".", 1)[1]: item for key, item in flat.items()}
 
         m = sections["mcp"]
+        sender = sections["sender"]
         t = sections["target"]
         f = sections["filter"]
         d = sections["dedup"]
@@ -332,6 +346,13 @@ class AppConfig:
                 connect_timeout=_float(m.get("connect_timeout", 10), 10),
                 auth_timeout=_float(m.get("auth_timeout", 10), 10),
                 subscribe_timeout=_float(m.get("subscribe_timeout", 10), 10),
+            ),
+            sender=SenderSettings(
+                mode=str(sender.get("mode", "native")).strip().casefold(),
+                endpoint=str(sender.get("endpoint", "http://127.0.0.1:6185/api/v1/im/message")).strip(),
+                auth_header=str(sender.get("auth_header", "bearer")).strip().casefold(),
+                api_key_env=str(sender.get("api_key_env", "ASTRBOT_MCC_TRANSFER_OPENAPI_KEY")).strip(),
+                timeout=_float(sender.get("timeout", 10), 10),
             ),
             target=TargetSettings(
                 platform_name=str(t.get("platform_name", "qq_official")).strip(),
@@ -435,6 +456,20 @@ class AppConfig:
     def validate(self, *, require_target: bool = True) -> None:
         if self.mcp.transport not in {"http", "websocket"}:
             raise ConfigError("mcp.transport must be http or websocket")
+        if self.sender.mode not in {"native", "openapi"}:
+            raise ConfigError("sender.mode must be native or openapi")
+        if self.sender.auth_header not in {"bearer", "x-api-key"}:
+            raise ConfigError("sender.auth_header must be bearer or x-api-key")
+        if not self.sender.api_key_env or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", self.sender.api_key_env):
+            raise ConfigError("sender.api_key_env must be a valid environment variable name")
+        if self.sender.timeout < 0:
+            raise ConfigError("sender.timeout must be non-negative")
+        if self.sender.mode == "openapi":
+            parsed_sender_url = urlsplit(self.sender.endpoint)
+            if parsed_sender_url.scheme not in {"http", "https"} or not parsed_sender_url.netloc:
+                raise ConfigError("sender.endpoint must be an absolute http(s) URL")
+            if parsed_sender_url.username or parsed_sender_url.password or parsed_sender_url.query or parsed_sender_url.fragment:
+                raise ConfigError("sender.endpoint must not contain credentials, query, or fragment")
         if self.mcp.transport == "http" and not self.mcp.url:
             raise ConfigError("mcp.url is required for HTTP transport")
         if not self.mcp.host:
@@ -502,7 +537,7 @@ SecurityConfig = SecuritySettings
 LoggingConfig = LoggingSettings
 
 __all__ = [
-    "AppConfig", "ConfigError", "MCPSettings", "McpConfig", "TargetSettings", "TargetConfig",
+    "AppConfig", "ConfigError", "MCPSettings", "McpConfig", "SenderSettings", "TargetSettings", "TargetConfig",
     "FilterSettings", "FilterConfig", "DedupSettings", "DedupConfig", "RetrySettings", "RetryConfig",
     "SecuritySettings", "SecurityConfig", "LoggingSettings", "LoggingConfig", "ProtocolSettings",
     "ParserSettings",

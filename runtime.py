@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from .astrbot_adapter import AstrBotSender, resolve_target
+    from .astrbot_adapter import AstrBotOpenAPISender, AstrBotSender, resolve_target
     from .control import write_status
     from .delivery import DeliveryPipeline
     from .filter_chain import FilterChain
@@ -19,7 +19,7 @@ try:
     from .models import RuntimeStatus
     from .persistence import DedupStore, RetryQueue
 except ImportError:  # pragma: no cover - standalone fallback
-    from astrbot_adapter import AstrBotSender, resolve_target
+    from astrbot_adapter import AstrBotOpenAPISender, AstrBotSender, resolve_target
     from control import write_status
     from delivery import DeliveryPipeline
     from filter_chain import FilterChain
@@ -55,6 +55,7 @@ class PluginRuntime:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.sender = sender
+        self._sender_injected = sender is not None
         self.status = RuntimeStatus()
         self._mcp: Any = None
         self._mcp_task: asyncio.Task[Any] | None = None
@@ -73,6 +74,14 @@ class PluginRuntime:
             "url": self._value(self._get("mcp"), "url", ""),
             "password_configured": bool(str(self._value(self._get("mcp"), "password", "")).strip()),
         }
+        sender = self.sender
+        if sender is not None and hasattr(sender, "diagnostics"):
+            snapshot["sender"] = sender.diagnostics()
+        else:
+            sender_config = self._get("sender")
+            snapshot["sender"] = {
+                "mode": self._value(sender_config, "mode", "native"),
+            }
         try:
             write_status(self._status_path, snapshot)
         except Exception:
@@ -84,6 +93,13 @@ class PluginRuntime:
         if hasattr(self.config, "get"):
             return self.config.get(name, default)
         return default
+
+    def mark_inactive(self, reason: str) -> None:
+        self.status.running = False
+        self.status.connected = False
+        self.status.lifecycle_state = "inactive"
+        self.status.last_error = str(reason)
+        self._write_status()
 
     async def start(self) -> None:
         async with self._lock:
@@ -146,6 +162,8 @@ class PluginRuntime:
                 self._write_status()
             except Exception as exc:
                 self.status.running = False
+                self.status.connected = False
+                self.status.lifecycle_state = "failed"
                 self.status.last_error = str(exc)
                 self._started = False
                 self._write_status()
@@ -212,12 +230,24 @@ class PluginRuntime:
         await dedup.load()
         await retry.load()
         chain = FilterChain(filter_cfg or {}, dedup=dedup)
-        if self.sender is None:
-            if self.context is None:
-                raise RuntimeError("context or sender is required")
-            self.sender = AstrBotSender(self.context)
         target = resolve_target(target_cfg or config)
         self.status.target_umo = target.umo
+        if not self._sender_injected:
+            sender_cfg = self._get("sender")
+            mode = str(self._value(sender_cfg, "mode", "native")).casefold()
+            if mode == "openapi":
+                self.sender = AstrBotOpenAPISender(
+                    str(self._value(sender_cfg, "endpoint", "http://127.0.0.1:6185/api/v1/im/message")),
+                    api_key_env=str(self._value(sender_cfg, "api_key_env", "ASTRBOT_MCC_TRANSFER_OPENAPI_KEY")),
+                    auth_header=str(self._value(sender_cfg, "auth_header", "bearer")).casefold(),
+                    timeout=float(self._value(sender_cfg, "timeout", 10)),
+                )
+            else:
+                if self.context is None:
+                    raise RuntimeError("context or sender is required")
+                self.sender = AstrBotSender(self.context)
+        if self.sender is None:
+            raise RuntimeError("context or sender is required")
         return DeliveryPipeline(
             filter_chain=chain,
             dedup=dedup,
@@ -310,11 +340,14 @@ class PluginRuntime:
                     await self._mcp.disconnect()
             self._mcp = None
             self._http_mcp = None
+            if not self._sender_injected:
+                self.sender = None
             self._mcp_task = None
             self._retry_task = None
             self._started = False
             self.status.running = False
             self.status.connected = False
+            self.status.lifecycle_state = "stopped"
             LOGGER.info("MCC transfer runtime stopped")
             self._write_status()
 

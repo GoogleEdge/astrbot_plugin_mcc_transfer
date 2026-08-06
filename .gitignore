@@ -1,4 +1,8 @@
 MCC/
+data/
+logs/
+.env
+config.ini
 __pycache__/
 *.py[cod]
 .pytest_cache/

@@ -2,7 +2,7 @@
 
 这是一个不调用 LLM 的 AstrBot 插件：通过当前 MCC 的 HTTP MCP Server（默认
 `http://127.0.0.1:33333/mcp`）轮询游戏事件，使用本地确定性规则解析/过滤，并通过
-AstrBot 主动消息 API 转发到 QQ 群。旧式 WebSocket `PlayerMessage` profile 仍可显式启用。
+AstrBot 主动消息 API 转发到 QQ 群。默认使用 Context API，也可显式选择 AstrBot HTTP OpenAPI；旧式 WebSocket `PlayerMessage` profile 仍可显式启用。
 
 ## 特性
 
@@ -27,13 +27,37 @@ powershell -NoProfile -Command "python -m pip install -r requirements.txt"
 运行状态默认保存到 AstrBot 数据目录的
 `plugin_data/astrbot_plugin_mcc_transfer/`。首次安装时 `target.group_id` 可以留空，
 插件会保持未启用状态；安装完成后在插件配置页填写群号并重载插件即可开始转发。
+插件通过 `Star.initialize()` 在每次加载/重载时启动，不依赖只在 AstrBot 全局启动时触发的事件。
 
 ## 配置
 
 `config.example.ini` 是独立 CLI/测试模式的 INI 示例；它与 AstrBot 配置映射到
 同一个内部配置模型。核心设置如下：
 
+### 发送方式
+
+默认 `sender.mode = native`，调用 AstrBot 的 `Context.send_message()`。如果原生主动发送不可用，
+可以在 AstrBot 4.18+ 中显式选择 `sender.mode = openapi`。OpenAPI 默认地址为
+`http://127.0.0.1:6185/api/v1/im/message`，请求使用完整 UMO 和纯文本消息：
+
+```json
+{"umo":"qqbot:GroupMessage:<session>","message":"[Minecraft] <player> hello"}
+```
+
+API key 只从 `sender.api_key_env` 指定的环境变量读取，默认变量名为
+`ASTRBOT_MCC_TRANSFER_OPENAPI_KEY`；不要把 key 写入配置、代码、日志或提交记录。认证头可选
+`Authorization: Bearer <key>` 或 `X-API-Key: <key>`。权限不足时 AstrBot 可能返回 `403`；
+插件将任意 HTTP 2xx 视为成功。OpenAPI 文档没有规定 QQ 群 UMO 的生成规则，因此应直接使用
+`target.umo_override` 中 `/sid` 显示的完整 UMO。实际部署若路径不同，可修改 endpoint。
+
 ```ini
+[sender]
+mode = native
+endpoint = http://127.0.0.1:6185/api/v1/im/message
+auth_header = bearer
+api_key_env = ASTRBOT_MCC_TRANSFER_OPENAPI_KEY
+timeout = 10
+
 [mcp]
 transport = http
 url = http://127.0.0.1:33333/mcp
