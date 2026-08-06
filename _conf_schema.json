@@ -1,98 +1,128 @@
 {
   "mcp": {
     "type": "object",
-    "description": "MCC MCP WebSocket connection",
-    "properties": {
-      "host": {"type": "string", "default": "127.0.0.1"},
-      "port": {"type": "integer", "default": 25575, "minimum": 1, "maximum": 65535},
-      "password": {"type": "string", "default": "", "format": "password"},
-      "reconnect_initial_delay": {"type": "number", "default": 1},
-      "reconnect_max_delay": {"type": "number", "default": 30},
-      "connect_timeout": {"type": "number", "default": 10},
-      "auth_timeout": {"type": "number", "default": 10},
-      "subscribe_timeout": {"type": "number", "default": 10}
+    "description": "MCC MCP WebSocket 连接",
+    "items": {
+      "host": {"type": "string", "description": "MCC MCP Server 地址", "default": "127.0.0.1"},
+      "port": {"type": "int", "description": "MCC MCP Server 端口", "default": 25575},
+      "password": {"type": "string", "description": "MCP 认证密码", "default": ""},
+      "reconnect_initial_delay": {"type": "float", "description": "初始重连延迟（秒）", "default": 1.0},
+      "reconnect_max_delay": {"type": "float", "description": "最大重连延迟（秒）", "default": 30.0},
+      "connect_timeout": {"type": "float", "description": "连接超时（秒）", "default": 10.0},
+      "auth_timeout": {"type": "float", "description": "认证超时（秒）", "default": 10.0},
+      "subscribe_timeout": {"type": "float", "description": "订阅超时（秒）", "default": 10.0}
     }
   },
   "target": {
     "type": "object",
-    "properties": {
-      "platform_name": {"type": "string", "default": "aiocqhttp"},
-      "platform_instance": {"type": "string", "default": "default"},
-      "message_type": {"type": "string", "default": "GroupMessage"},
-      "group_id": {"type": "string", "default": ""},
-      "umo_template": {"type": "string", "default": "{platform_name}:{platform_instance}:{message_type}:{group_id}"},
-      "umo_override": {"type": "string", "default": ""},
-      "message_template": {"type": "string", "default": "[Minecraft] <{sender}> {message}"}
+    "description": "AstrBot 主动消息目标",
+    "items": {
+      "platform_name": {"type": "string", "description": "平台适配器名称", "default": "aiocqhttp"},
+      "platform_instance": {"type": "string", "description": "平台实例 ID", "default": "default"},
+      "message_type": {"type": "string", "description": "消息类型", "default": "GroupMessage"},
+      "group_id": {"type": "string", "description": "目标 QQ 群号；安装后必须填写", "default": ""},
+      "umo_template": {"type": "string", "description": "统一消息来源模板", "default": "{platform_name}:{platform_instance}:{message_type}:{group_id}"},
+      "umo_override": {"type": "string", "description": "完整 UMO 覆盖值（通常留空）", "default": ""},
+      "message_template": {"type": "string", "description": "转发消息模板", "default": "[Minecraft] <{sender}> {message}"}
     }
   },
   "filter": {
     "type": "object",
-    "properties": {
-      "enabled": {"type": "boolean", "default": true},
-      "ignore_bot_messages": {"type": "boolean", "default": true},
-      "bot_name": {"type": "string", "default": "MCCBot"},
-      "ignore_system_messages": {"type": "boolean", "default": true},
-      "ignore_join_messages": {"type": "boolean", "default": true},
-      "ignore_leave_messages": {"type": "boolean", "default": true},
-      "ignore_death_messages": {"type": "boolean", "default": true},
-      "ignore_advancement_messages": {"type": "boolean", "default": true},
-      "ignore_server_announcements": {"type": "boolean", "default": true},
-      "ignore_empty_messages": {"type": "boolean", "default": true},
-      "ignore_command_messages": {"type": "boolean", "default": true},
-      "command_prefixes": {"type": "array", "default": ["/", "!"]},
-      "enable_player_blacklist": {"type": "boolean", "default": false},
-      "blacklist_players": {"type": "array", "default": []},
-      "enable_player_whitelist": {"type": "boolean", "default": false},
-      "whitelist_players": {"type": "array", "default": []},
-      "enable_keyword_filter": {"type": "boolean", "default": false},
-      "blocked_keywords": {"type": "array", "default": []},
-      "keyword_case_sensitive": {"type": "boolean", "default": false},
-      "keyword_whole_word": {"type": "boolean", "default": false},
-      "enable_regex_filter": {"type": "boolean", "default": false},
-      "blocked_regex": {"type": "array", "default": []}
+    "description": "确定性消息过滤规则",
+    "items": {
+      "enabled": {"type": "bool", "description": "启用过滤链", "default": true},
+      "ignore_bot_messages": {"type": "bool", "description": "忽略 Bot 自身消息", "default": true},
+      "bot_name": {"type": "string", "description": "MCC Bot 玩家名", "default": "MCCBot"},
+      "ignore_system_messages": {"type": "bool", "description": "忽略系统消息", "default": true},
+      "ignore_join_messages": {"type": "bool", "description": "忽略加入消息", "default": true},
+      "ignore_leave_messages": {"type": "bool", "description": "忽略退出消息", "default": true},
+      "ignore_death_messages": {"type": "bool", "description": "忽略死亡消息", "default": true},
+      "ignore_advancement_messages": {"type": "bool", "description": "忽略进度消息", "default": true},
+      "ignore_server_announcements": {"type": "bool", "description": "忽略服务器公告", "default": true},
+      "ignore_empty_messages": {"type": "bool", "description": "忽略空消息", "default": true},
+      "ignore_command_messages": {"type": "bool", "description": "忽略命令消息", "default": true},
+      "command_prefixes": {"type": "list", "description": "命令前缀", "default": ["/", "!"]},
+      "enable_player_blacklist": {"type": "bool", "description": "启用玩家黑名单", "default": false},
+      "blacklist_players": {"type": "list", "description": "玩家黑名单", "default": []},
+      "enable_player_whitelist": {"type": "bool", "description": "启用玩家白名单", "default": false},
+      "whitelist_players": {"type": "list", "description": "玩家白名单", "default": []},
+      "enable_keyword_filter": {"type": "bool", "description": "启用关键词过滤", "default": false},
+      "blocked_keywords": {"type": "list", "description": "屏蔽关键词", "default": []},
+      "keyword_case_sensitive": {"type": "bool", "description": "关键词区分大小写", "default": false},
+      "keyword_whole_word": {"type": "bool", "description": "仅匹配完整单词", "default": false},
+      "enable_regex_filter": {"type": "bool", "description": "启用正则过滤", "default": false},
+      "blocked_regex": {"type": "list", "description": "屏蔽正则表达式", "default": []}
     }
   },
   "dedup": {
     "type": "object",
-    "properties": {
-      "enabled": {"type": "boolean", "default": true},
-      "cache_size": {"type": "integer", "default": 1000},
-      "ttl_seconds": {"type": "number", "default": 300},
-      "state_file": {"type": "string", "default": "data/dedup_cache.json"}
+    "description": "重复消息检测",
+    "items": {
+      "enabled": {"type": "bool", "description": "启用去重", "default": true},
+      "cache_size": {"type": "int", "description": "指纹缓存容量", "default": 1000},
+      "ttl_seconds": {"type": "float", "description": "指纹有效期（秒）", "default": 300.0},
+      "state_file": {"type": "string", "description": "去重状态文件", "default": "data/dedup_cache.json"}
     }
   },
   "retry": {
     "type": "object",
-    "properties": {
-      "max_attempts": {"type": "integer", "default": 5},
-      "initial_delay_seconds": {"type": "number", "default": 1},
-      "max_delay_seconds": {"type": "number", "default": 30},
-      "queue_file": {"type": "string", "default": "data/failed_messages.json"},
-      "replay_failed_messages": {"type": "boolean", "default": true},
-      "max_queue_size": {"type": "integer", "default": 1000},
-      "drop_expired_messages": {"type": "boolean", "default": false},
-      "message_expire_seconds": {"type": "number", "default": 3600}
+    "description": "失败消息重试",
+    "items": {
+      "max_attempts": {"type": "int", "description": "最大尝试次数", "default": 5},
+      "initial_delay_seconds": {"type": "float", "description": "初始重试延迟（秒）", "default": 1.0},
+      "max_delay_seconds": {"type": "float", "description": "最大重试延迟（秒）", "default": 30.0},
+      "queue_file": {"type": "string", "description": "失败队列文件", "default": "data/failed_messages.json"},
+      "replay_failed_messages": {"type": "bool", "description": "启动后重放失败消息", "default": true},
+      "max_queue_size": {"type": "int", "description": "失败队列容量", "default": 1000},
+      "drop_expired_messages": {"type": "bool", "description": "丢弃过期消息", "default": false},
+      "message_expire_seconds": {"type": "float", "description": "消息过期时间（秒）", "default": 3600.0}
     }
   },
   "security": {
     "type": "object",
-    "properties": {
-      "max_message_length": {"type": "integer", "default": 500},
-      "rate_limit_per_second": {"type": "number", "default": 5},
-      "split_long_messages": {"type": "boolean", "default": true},
-      "merge_messages": {"type": "boolean", "default": false},
-      "merge_window_seconds": {"type": "number", "default": 3}
+    "description": "消息长度和限流",
+    "items": {
+      "max_message_length": {"type": "int", "description": "单条消息最大长度", "default": 500},
+      "rate_limit_per_second": {"type": "float", "description": "每秒最大发送数；0 表示不限流", "default": 5.0},
+      "split_long_messages": {"type": "bool", "description": "拆分超长消息", "default": true},
+      "merge_messages": {"type": "bool", "description": "合并短时间内的消息", "default": false},
+      "merge_window_seconds": {"type": "float", "description": "消息合并窗口（秒）", "default": 3.0}
     }
   },
   "logging": {
     "type": "object",
-    "properties": {
-      "level": {"type": "string", "default": "INFO"},
-      "log_file": {"type": "string", "default": ""},
-      "max_bytes": {"type": "integer", "default": 10485760},
-      "backup_count": {"type": "integer", "default": 5}
+    "description": "插件日志",
+    "items": {
+      "level": {"type": "string", "description": "日志级别", "default": "INFO", "options": ["DEBUG", "INFO", "WARNING", "ERROR"]},
+      "log_file": {"type": "string", "description": "日志文件；留空时使用 AstrBot 日志", "default": ""},
+      "max_bytes": {"type": "int", "description": "日志轮转大小", "default": 10485760},
+      "backup_count": {"type": "int", "description": "日志备份数量", "default": 5}
     }
   },
-  "protocol": {"type": "object", "properties": {}},
-  "parser": {"type": "object", "properties": {}}
+  "protocol": {
+    "type": "object",
+    "description": "MCP JSON 帧协议映射",
+    "items": {
+      "auth_template_json": {"type": "text", "description": "认证帧 JSON 模板", "default": "{\"type\":\"auth\",\"password\":\"{password}\"}", "editor_mode": true, "editor_language": "json"},
+      "subscribe_template_json": {"type": "text", "description": "订阅帧 JSON 模板", "default": "{\"type\":\"subscribe\",\"event\":\"{event}\"}", "editor_mode": true, "editor_language": "json"},
+      "event_name": {"type": "string", "description": "订阅事件名称", "default": "PlayerMessage"},
+      "event_type_path": {"type": "string", "description": "事件类型字段路径", "default": "type"},
+      "event_name_path": {"type": "string", "description": "事件名称字段路径", "default": "event"},
+      "auth_status_path": {"type": "string", "description": "认证状态字段路径", "default": "status"},
+      "auth_success_values_json": {"type": "text", "description": "认证成功值 JSON 数组", "default": "[\"success\",\"ok\",true]", "editor_mode": true, "editor_language": "json"},
+      "field_paths_json": {"type": "text", "description": "协议字段路径 JSON 对象", "default": "{}", "editor_mode": true, "editor_language": "json"}
+    }
+  },
+  "parser": {
+    "type": "object",
+    "description": "MCP 事件字段映射",
+    "items": {
+      "field_paths_json": {"type": "text", "description": "sender/message/timestamp/kind/event_id 的候选路径 JSON 对象", "default": "{\"sender\":[\"player\",\"sender\",\"data.player\",\"payload.player\"],\"message\":[\"message\",\"text\",\"data.message\",\"payload.message\"],\"timestamp\":[\"timestamp\",\"time\",\"data.timestamp\",\"payload.timestamp\"],\"kind\":[\"kind\",\"message_type\",\"data.kind\",\"payload.kind\"],\"event_id\":[\"id\",\"event_id\",\"data.id\",\"payload.id\"]}", "editor_mode": true, "editor_language": "json"},
+      "accepted_event_names": {"type": "list", "description": "接受的事件名称；留空时使用 PlayerMessage", "default": []},
+      "ignore_unknown_events": {"type": "bool", "description": "忽略未知事件", "default": true},
+      "allow_missing_sender": {"type": "bool", "description": "允许缺少玩家名", "default": false},
+      "allow_missing_message": {"type": "bool", "description": "允许缺少消息正文", "default": false},
+      "require_event_marker": {"type": "bool", "description": "要求事件标识字段", "default": false}
+    }
+  }
 }
