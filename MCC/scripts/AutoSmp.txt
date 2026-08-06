@@ -1,2 +1,0 @@
-wait 400
-send /server smp

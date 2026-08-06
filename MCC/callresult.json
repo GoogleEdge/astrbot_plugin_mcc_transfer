@@ -1,3 +1,0 @@
-event: message
-data: {"result":{"content":[{"type":"text","text":"{\u0022success\u0022:true,\u0022data\u0022:{\u0022host\u0022:\u0022127.0.0.1\u0022,\u0022port\u0022:25565,\u0022username\u0022:\u0022MCCBot\u0022,\u0022protocolVersion\u0022:776,\u0022terrainEnabled\u0022:true,\u0022inventoryEnabled\u0022:true,\u0022entityEnabled\u0022:true,\u0022location\u0022:{\u0022x\u0022:-10.5,\u0022y\u0022:63,\u0022z\u0022:-27.5}}}"}]},"id":3,"jsonrpc":"2.0"}
-
