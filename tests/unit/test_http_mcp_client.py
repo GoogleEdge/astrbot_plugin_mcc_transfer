@@ -22,7 +22,7 @@ class _Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Mcp-Session-Id", "test-session")
         elif method == "tools/call":
-            text = json.dumps({"events": [{"id": 1, "player": "Alex", "message": "hello"}]})
+            text = json.dumps({"success": True, "data": {"events": [{"id": 1, "type": "chat_public", "data": {"sender": "Alex", "message": "hello"}}]}})
             result = {"jsonrpc": "2.0", "id": payload.get("id"), "result": {"content": [{"type": "text", "text": text}]}}
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
@@ -55,7 +55,7 @@ async def test_http_mcp_initialize_and_poll():
         await client.initialize()
         assert client.session_id == "test-session"
         assert await client.poll_once() == 1
-        assert received[0]["message"] == "hello"
+        assert received[0]["data"]["message"] == "hello"
     finally:
         server.shutdown()
         thread.join(timeout=2)

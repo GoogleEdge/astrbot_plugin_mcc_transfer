@@ -158,13 +158,19 @@ class HTTPMCPClient:
             session_id=self.session_id,
         )
 
-    @staticmethod
-    def _events_from_result(result: Any) -> list[Mapping[str, Any]]:
+    @classmethod
+    def _events_from_result(cls, result: Any) -> list[Mapping[str, Any]]:
         if isinstance(result, Mapping):
-            for key in ("events", "data", "items", "recentEvents"):
+            for key in ("events", "items", "recentEvents"):
                 value = result.get(key)
                 if isinstance(value, list):
                     return [item for item in value if isinstance(item, Mapping)]
+            for key in ("data", "result"):
+                value = result.get(key)
+                if isinstance(value, (Mapping, list)):
+                    nested = cls._events_from_result(value)
+                    if nested:
+                        return nested
             return [result] if any(key in result for key in ("message", "text", "event")) else []
         if isinstance(result, list):
             return [item for item in result if isinstance(item, Mapping)]
