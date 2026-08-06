@@ -1,12 +1,13 @@
 # AstrBot MCC 聊天转发插件
 
-这是一个不调用 LLM 的 AstrBot 插件：通过 WebSocket 连接 Minecraft Console
-Client（MCC）MCP Server，使用本地确定性规则解析/过滤游戏事件，并通过
-AstrBot 主动消息 API 转发到 QQ 群。
+这是一个不调用 LLM 的 AstrBot 插件：通过当前 MCC 的 HTTP MCP Server（默认
+`http://127.0.0.1:33333/mcp`）轮询游戏事件，使用本地确定性规则解析/过滤，并通过
+AstrBot 主动消息 API 转发到 QQ 群。旧式 WebSocket `PlayerMessage` profile 仍可显式启用。
 
 ## 特性
 
-- WebSocket JSON auth、`PlayerMessage` 订阅与断线指数退避重连
+- HTTP MCP JSON-RPC initialize/session/tool-call，默认轮询 `mcc_recent_events`
+- 旧式 WebSocket JSON auth、`PlayerMessage` 订阅与断线指数退避重连
 - 固定顺序过滤：Bot、系统/加入/退出/死亡/进度、公告、命令、黑白名单、关键词、正则、空消息、去重
 - 失败消息持久化和指数退避重试
 - 去重缓存 TTL/容量控制，消息限流、长度分片/截断、可选合并
@@ -34,9 +35,11 @@ powershell -NoProfile -Command "python -m pip install -r requirements.txt"
 
 ```ini
 [mcp]
-host = 127.0.0.1
-port = 25575
-password = your_secure_password
+transport = http
+url = http://127.0.0.1:33333/mcp
+poll_interval = 2
+chat_tool = mcc_recent_events
+chat_max_count = 50
 
 [target]
 ; QQ Official 使用 qq_official，并填写群 openid 或频道 channel_id

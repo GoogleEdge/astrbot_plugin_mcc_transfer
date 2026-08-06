@@ -23,6 +23,10 @@ class TargetResolutionError(RuntimeError):
     """Raised when a configured AstrBot message target cannot be resolved."""
 
 
+class AstrBotDeliveryError(RuntimeError):
+    """Raised when AstrBot explicitly rejects a proactive message."""
+
+
 def build_umo(
     *,
     platform_name: str,
@@ -141,7 +145,12 @@ class AstrBotSender:
     async def send(self, text: str, target_umo: str) -> None:
         result = self.context.send_message(target_umo, self._make_chain(text))
         if inspect.isawaitable(result):
-            await result
+            result = await result
+        if result is False:
+            raise AstrBotDeliveryError(
+                f"AstrBot rejected proactive message for UMO {target_umo!r}; "
+                "verify the exact platform instance ID from /sid"
+            )
 
 
 async def discover_platform_instances(context: Any, platform_name: str) -> dict[str, tuple[str, ...]]:

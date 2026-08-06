@@ -1,0 +1,10 @@
+Minecraft ÃüÁîĞĞ¿Í»§¶Ë v26.2 - ÊÊÓÃÓÚ MC 1.4.6 ÖÁ 26.2 - Github.com/MCCTeam
+[37mGitHub build 498, built on 2026-07-27 from commit 503652a[0m
+[93m? Ï²»¶ MCC Âğ£¿ÔÚ GitHub ÉÏ¸øÎÒÃÇµã¸öÔŞ°É£ºhttps://github.com/MCCTeam/Minecraft-Console-Client[0m
+[91mÅäÖÃÎÄ¼ş MinecraftClient.ini ÒÑ¾­Éú³É¡£[0m
+
+MCCÕıÔÚÊ¹ÓÃÄ¬ÈÏÅäÖÃÔËĞĞ¡£
+MCC Ê¹ÓÃ Sentry À´¼ÇÂ¼´íÎó¡£Äú¿ÉÒÔÍ¨¹ı½«ÅäÖÃÎÄ¼şÖĞµÄ EnableSentry Ñ¡ÏîÉèÖÃÎª false À´Ñ¡ÔñÍË³ö¡£
+Select a login method: [1] Offline, [2] Online (Microsoft), [3] Yggdrasil
+[93mæ–°ç‰ˆæœ¬çš„ MCC å¯ç”¨ï¼Œæ‚¨å¯ä»¥é€šè¿‡ /upgrade è¿›è¡Œæ›´æ–°
+æˆ–æ‰‹åŠ¨ä¸‹è½½ï¼šhttps://github.com/MCCTeam/Minecraft-Console-Client/releases[0m

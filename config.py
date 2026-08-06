@@ -106,9 +106,18 @@ def _section(root: Mapping[str, Any], name: str) -> Mapping[str, Any]:
 
 @dataclass(frozen=True, slots=True)
 class MCPSettings:
+    # Current MCC exposes an HTTP MCP endpoint.  The legacy WebSocket profile
+    # remains available by setting transport=websocket.
+    transport: str = "http"
+    url: str = "http://127.0.0.1:33333/mcp"
     host: str = "127.0.0.1"
-    port: int = 25575
+    port: int = 33333
     password: str = ""
+    auth_mode: str = "auto"
+    subscribe_ack: bool = False
+    poll_interval: float = 2.0
+    chat_tool: str = "mcc_recent_events"
+    chat_max_count: int = 50
     reconnect_initial_delay: float = 1.0
     reconnect_max_delay: float = 30.0
     connect_timeout: float = 10.0
@@ -308,9 +317,16 @@ class AppConfig:
 
         result = cls(
             mcp=MCPSettings(
+                transport=str(m.get("transport", "http")).strip().casefold(),
+                url=str(m.get("url", "http://127.0.0.1:33333/mcp")).strip(),
                 host=str(m.get("host", "127.0.0.1")).strip(),
-                port=_int(m.get("port", 25575), 25575),
+                port=_int(m.get("port", 33333), 33333),
                 password=_env(m.get("password", "")),
+                auth_mode=str(m.get("auth_mode", "auto")).strip().casefold(),
+                subscribe_ack=_bool(m.get("subscribe_ack", False)),
+                poll_interval=_float(m.get("poll_interval", 2), 2),
+                chat_tool=str(m.get("chat_tool", "mcc_recent_events")).strip(),
+                chat_max_count=_int(m.get("chat_max_count", 50), 50),
                 reconnect_initial_delay=_float(m.get("reconnect_initial_delay", 1), 1),
                 reconnect_max_delay=_float(m.get("reconnect_max_delay", 30), 30),
                 connect_timeout=_float(m.get("connect_timeout", 10), 10),
@@ -417,6 +433,10 @@ class AppConfig:
         return cls.from_mapping(sections)
 
     def validate(self, *, require_target: bool = True) -> None:
+        if self.mcp.transport not in {"http", "websocket"}:
+            raise ConfigError("mcp.transport must be http or websocket")
+        if self.mcp.transport == "http" and not self.mcp.url:
+            raise ConfigError("mcp.url is required for HTTP transport")
         if not self.mcp.host:
             raise ConfigError("mcp.host is required")
         if not 1 <= self.mcp.port <= 65535:
@@ -432,6 +452,12 @@ class AppConfig:
                 raise ConfigError(f"mcp.{name} must be non-negative")
         if self.mcp.reconnect_max_delay < self.mcp.reconnect_initial_delay:
             raise ConfigError("mcp.reconnect_max_delay must be >= reconnect_initial_delay")
+        if self.mcp.auth_mode not in {"auto", "required", "none"}:
+            raise ConfigError("mcp.auth_mode must be auto, required, or none")
+        if self.mcp.auth_mode == "required" and not self.mcp.password:
+            raise ConfigError("mcp.password is required when mcp.auth_mode=required")
+        if self.mcp.poll_interval < 0 or self.mcp.chat_max_count < 1:
+            raise ConfigError("mcp.poll_interval must be non-negative and chat_max_count positive")
         if require_target and not self.target.group_id and not self.target.umo_override:
             raise ConfigError("target.group_id is required")
         if self.target.message_type == "":

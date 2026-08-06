@@ -1,11 +1,18 @@
 {
   "mcp": {
     "type": "object",
-    "description": "MCC MCP WebSocket 连接",
+    "description": "MCC MCP 连接；当前 MCC 使用 HTTP JSON-RPC，旧版 WebSocket 可显式选择",
     "items": {
-      "host": {"type": "string", "description": "MCC MCP Server 地址", "default": "127.0.0.1"},
-      "port": {"type": "int", "description": "MCC MCP Server 端口", "default": 25575},
-      "password": {"type": "string", "description": "MCP 认证密码", "default": ""},
+      "transport": {"type": "string", "description": "传输方式：当前 MCC 填 http，旧版 PlayerMessage 服务填 websocket", "default": "http", "options": ["http", "websocket"]},
+      "url": {"type": "string", "description": "HTTP MCP 地址", "default": "http://127.0.0.1:33333/mcp"},
+      "host": {"type": "string", "description": "旧版 WebSocket MCP Server 地址", "default": "127.0.0.1"},
+      "port": {"type": "int", "description": "旧版 WebSocket MCP Server 端口", "default": 33333},
+      "password": {"type": "string", "description": "WebSocket MCP 认证密码；HTTP MCP 通常留空", "default": ""},
+      "auth_mode": {"type": "string", "description": "认证模式：auto 空密码跳过、required 必须认证、none 不认证", "default": "auto", "options": ["auto", "required", "none"]},
+      "subscribe_ack": {"type": "bool", "description": "旧版 WebSocket 是否等待订阅确认", "default": false},
+      "poll_interval": {"type": "float", "description": "HTTP MCP 聊天事件轮询间隔（秒）", "default": 2.0},
+      "chat_tool": {"type": "string", "description": "HTTP MCP 获取聊天/事件的工具名", "default": "mcc_recent_events"},
+      "chat_max_count": {"type": "int", "description": "每次获取的最大事件数", "default": 50},
       "reconnect_initial_delay": {"type": "float", "description": "初始重连延迟（秒）", "default": 1.0},
       "reconnect_max_delay": {"type": "float", "description": "最大重连延迟（秒）", "default": 30.0},
       "connect_timeout": {"type": "float", "description": "连接超时（秒）", "default": 10.0},

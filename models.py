@@ -158,11 +158,14 @@ class RetryRecord:
 class RuntimeStatus:
     running: bool = False
     connected: bool = False
+    lifecycle_state: str = "created"
+    target_umo: str | None = None
     received: int = 0
     forwarded: int = 0
     filtered: int = 0
     failed: int = 0
     retried: int = 0
+    mcp_connection_count: int = 0
     last_error: str | None = None
     last_message_at: str | None = None
 
@@ -170,11 +173,14 @@ class RuntimeStatus:
         return {
             "running": self.running,
             "connected": self.connected,
+            "lifecycle_state": self.lifecycle_state,
+            "target_umo": self.target_umo,
             "received": self.received,
             "forwarded": self.forwarded,
             "filtered": self.filtered,
             "failed": self.failed,
             "retried": self.retried,
+            "mcp_connection_count": self.mcp_connection_count,
             "last_error": self.last_error,
             "last_message_at": self.last_message_at,
         }

@@ -12,6 +12,7 @@ from typing import Any
 
 try:
     from .astrbot_adapter import AstrBotSender, resolve_target
+    from .control import write_status
     from .delivery import DeliveryPipeline
     from .filter_chain import FilterChain
     from .mcp_client import MCPClient
@@ -19,6 +20,7 @@ try:
     from .persistence import DedupStore, RetryQueue
 except ImportError:  # pragma: no cover - standalone fallback
     from astrbot_adapter import AstrBotSender, resolve_target
+    from control import write_status
     from delivery import DeliveryPipeline
     from filter_chain import FilterChain
     from models import RuntimeStatus
@@ -28,6 +30,11 @@ except ImportError:  # pragma: no cover - standalone fallback
         from mcp_client import MCPClient
     except ImportError:  # pragma: no cover - protects partial installs during development
         MCPClient = None  # type: ignore[assignment,misc]
+
+try:
+    from .http_mcp_client import HTTPMCPClient
+except ImportError:  # pragma: no cover - standalone fallback
+    from http_mcp_client import HTTPMCPClient
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,6 +63,20 @@ class PluginRuntime:
         self._started = False
         self._lock = asyncio.Lock()
         self.pipeline: DeliveryPipeline | None = None
+        self._status_path = self.data_dir / "status.json"
+        self._http_mcp: HTTPMCPClient | None = None
+
+    def _write_status(self) -> None:
+        snapshot = self.status.to_dict()
+        snapshot["mcp"] = {
+            "transport": self._value(self._get("mcp"), "transport", "http"),
+            "url": self._value(self._get("mcp"), "url", ""),
+            "password_configured": bool(str(self._value(self._get("mcp"), "password", "")).strip()),
+        }
+        try:
+            write_status(self._status_path, snapshot)
+        except Exception:
+            LOGGER.exception("Failed to write MCC transfer status")
 
     def _get(self, name: str, default: Any = None) -> Any:
         if hasattr(self.config, name):
@@ -70,24 +91,93 @@ class PluginRuntime:
                 return
             self._stop_event.clear()
             self.status.running = True
+            self.status.lifecycle_state = "starting"
+            self.status.last_error = None
             self._started = True
+            self._write_status()
+            LOGGER.info("MCC transfer runtime starting")
             try:
                 self.pipeline = await self._build_pipeline()
-                if MCPClient is None:
-                    raise RuntimeError("mcp_client module is unavailable")
                 mcp = self._get("mcp")
+                if MCPClient is None and str(self._value(mcp, "transport", "http")).casefold() == "websocket":
+                    raise RuntimeError("mcp_client module is unavailable")
                 client_config = mcp if mcp is not None else self.config
                 on_message = self._on_mcp_message
-                host = self._value(client_config, "host", "127.0.0.1")
-                port = int(self._value(client_config, "port", 25575))
-                password = str(self._value(client_config, "password", ""))
-                self._mcp = MCPClient(host, port, password, on_message)
-                self._mcp_task = asyncio.create_task(self._mcp.connect(), name="mcc-mcp-client")
+                transport = str(self._value(client_config, "transport", "http")).casefold()
+                if transport == "http":
+                    self._http_mcp = HTTPMCPClient(
+                        str(self._value(client_config, "url", "http://127.0.0.1:33333/mcp")),
+                        timeout=float(self._value(client_config, "connect_timeout", 10)),
+                        poll_interval=float(self._value(client_config, "poll_interval", 2)),
+                        chat_tool=str(self._value(client_config, "chat_tool", "mcc_recent_events")),
+                        chat_max_count=int(self._value(client_config, "chat_max_count", 50)),
+                        on_message=self._on_http_event,
+                        on_state=self._on_mcp_state,
+                        logger=LOGGER,
+                    )
+                    self._mcp = self._http_mcp
+                    self._mcp_task = asyncio.create_task(self._http_mcp.connect(), name="mcc-http-mcp-client")
+                else:
+                    host = self._value(client_config, "host", "127.0.0.1")
+                    port = int(self._value(client_config, "port", 25575))
+                    password = str(self._value(client_config, "password", ""))
+                    self._mcp = MCPClient(
+                        host,
+                        port,
+                        password,
+                        on_message,
+                        reconnect_initial_delay=float(self._value(client_config, "reconnect_initial_delay", 1)),
+                        reconnect_max_delay=float(self._value(client_config, "reconnect_max_delay", 30)),
+                        connect_timeout=float(self._value(client_config, "connect_timeout", 10)),
+                        auth_timeout=float(self._value(client_config, "auth_timeout", 10)),
+                        subscribe_timeout=float(self._value(client_config, "subscribe_timeout", 10)),
+                        auth_mode=str(self._value(client_config, "auth_mode", "auto")),
+                        subscribe_ack=bool(self._value(client_config, "subscribe_ack", False)),
+                        protocol=self._get("protocol"),
+                        parser=self._get("parser"),
+                        event_name=self._value(self._get("protocol"), "event_name", None),
+                        on_state=self._on_mcp_state,
+                        logger=LOGGER,
+                    )
+                    self._mcp_task = asyncio.create_task(self._mcp.connect(), name="mcc-mcp-client")
+                self._mcp_task.add_done_callback(self._mcp_done)
                 self._retry_task = asyncio.create_task(self._retry_loop(), name="mcc-retry-worker")
-            except Exception:
+                LOGGER.info("MCC transfer runtime started: transport=%s", transport)
+                self._write_status()
+            except Exception as exc:
                 self.status.running = False
+                self.status.last_error = str(exc)
                 self._started = False
+                self._write_status()
+                LOGGER.exception("MCC transfer runtime failed to start")
                 raise
+
+    async def _on_http_event(self, event: Mapping[str, Any]) -> None:
+        sender = str(event.get("player", event.get("sender", event.get("username", "MCC"))))
+        message = str(event.get("message", event.get("text", event.get("content", ""))))
+        if message:
+            await self._on_mcp_message(sender, message, event)
+
+    async def _on_mcp_state(self, state: str, details: Mapping[str, Any]) -> None:
+        self.status.lifecycle_state = state
+        self.status.connected = state in {"socket_open", "authenticated", "auth_skipped", "ready"}
+        if self._mcp is not None:
+            self.status.mcp_connection_count = int(getattr(self._mcp, "connection_count", 0))
+        if state in {"failed", "disconnected", "reconnecting"}:
+            self.status.last_error = str(details.get("error", details.get("reason", ""))) or self.status.last_error
+        LOGGER.info("MCC MCP lifecycle: state=%s details=%s", state, dict(details))
+        self._write_status()
+
+    def _mcp_done(self, task: asyncio.Task[Any]) -> None:
+        if task.cancelled() or self._stop_event.is_set():
+            return
+        error = task.exception()
+        if error is not None:
+            self.status.failed += 1
+            self.status.last_error = str(error)
+            LOGGER.exception("MCC MCP task stopped unexpectedly", exc_info=error)
+        self.status.connected = False
+        self._write_status()
 
     async def _build_pipeline(self) -> DeliveryPipeline:
         config = self.config
@@ -115,6 +205,7 @@ class PluginRuntime:
                 raise RuntimeError("context or sender is required")
             self.sender = AstrBotSender(self.context)
         target = resolve_target(target_cfg or config)
+        self.status.target_umo = target.umo
         return DeliveryPipeline(
             filter_chain=chain,
             dedup=dedup,
@@ -148,10 +239,17 @@ class PluginRuntime:
             return
         try:
             result = await self.pipeline.handle_raw(sender, message, raw)
-            if result:
+            if result.sent:
                 self.status.forwarded += 1
-            else:
+                LOGGER.info("MCC message forwarded: sender=%s", sender)
+            elif result.filtered:
                 self.status.filtered += 1
+                LOGGER.debug("MCC message filtered: sender=%s reason=%s", sender, result.reason)
+            else:
+                self.status.failed += 1
+                self.status.last_error = str(result.error or result.reason)
+                LOGGER.warning("MCC message delivery failed: reason=%s error=%s", result.reason, result.error)
+            self._write_status()
         except Exception as exc:  # callback failures must not kill MCP receive loop
             self.status.failed += 1
             self.status.last_error = str(exc)
@@ -161,10 +259,22 @@ class PluginRuntime:
         while not self._stop_event.is_set():
             try:
                 if self.pipeline is not None:
-                    await self.pipeline.process_due_retries()
+                    results = await self.pipeline.process_due_retries()
+                    for result in results:
+                        self.status.retried += 1
+                        if result.sent:
+                            self.status.forwarded += 1
+                        elif result.error is not None:
+                            self.status.failed += 1
+                            self.status.last_error = str(result.error)
+                    if results:
+                        self._write_status()
             except asyncio.CancelledError:
                 raise
-            except Exception:
+            except Exception as exc:
+                self.status.failed += 1
+                self.status.last_error = str(exc)
+                self._write_status()
                 LOGGER.exception("Retry worker failed")
             try:
                 await asyncio.wait_for(self._stop_event.wait(), timeout=0.5)
@@ -187,11 +297,14 @@ class PluginRuntime:
                 with contextlib.suppress(Exception):
                     await self._mcp.disconnect()
             self._mcp = None
+            self._http_mcp = None
             self._mcp_task = None
             self._retry_task = None
             self._started = False
             self.status.running = False
             self.status.connected = False
+            LOGGER.info("MCC transfer runtime stopped")
+            self._write_status()
 
     async def reload(self, config: Any) -> None:
         await self.stop()

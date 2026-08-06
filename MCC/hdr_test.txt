@@ -1,0 +1,10 @@
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Date: Mon, 03 Aug 2026 07:32:52 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Content-Encoding: identity
+Transfer-Encoding: chunked
+Mcp-Session-Id: PFvSZDWQK_mBSu_mYFgqWw
+X-Accel-Buffering: no
+

@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from astrbot_adapter import AstrBotDeliveryError, AstrBotSender
 from config import AppConfig, ConfigError
 from main import MCCTransferPlugin
 
@@ -12,6 +13,18 @@ def test_native_config_can_defer_target_validation():
     assert config.target.group_id == ""
     with pytest.raises(ConfigError, match="target.group_id is required"):
         AppConfig.from_mapping({})
+
+
+@pytest.mark.asyncio
+async def test_sender_surfaces_explicit_astrbot_rejection():
+    class Context:
+        async def send_message(self, _umo, _chain):
+            return False
+
+    with pytest.raises(AstrBotDeliveryError, match="rejected proactive message"):
+        await AstrBotSender(Context(), message_chain_factory=lambda: object()).send(
+            "hello", "qqbot:GroupMessage:session"
+        )
 
 
 @pytest.mark.asyncio

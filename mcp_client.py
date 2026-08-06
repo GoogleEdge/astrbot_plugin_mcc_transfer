@@ -11,7 +11,8 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-from collections.abc import Callable, Mapping
+from collections import deque
+from collections.abc import Awaitable, Callable, Mapping
 from types import TracebackType
 from typing import Any, TypeAlias
 
@@ -154,6 +155,11 @@ class MCPClient:
         event_name: str | None = None,
         websocket_kwargs: Mapping[str, Any] | None = None,
         connect_timeout: float | None = 10.0,
+        auth_timeout: float | None = 10.0,
+        subscribe_timeout: float | None = 10.0,
+        auth_mode: str = "auto",
+        subscribe_ack: bool = False,
+        on_state: Callable[[str, Mapping[str, Any]], Awaitable[None] | None] | None = None,
         logger: logging.Logger | None = None,
         **kwargs: Any,
     ) -> None:
@@ -177,6 +183,13 @@ class MCPClient:
             raise ValueError("uri and url disagree")
         self.uri = uri or url or f"ws://{host}:{port}"
         self.connect_timeout = connect_timeout
+        self.auth_timeout = auth_timeout
+        self.subscribe_timeout = subscribe_timeout
+        self.auth_mode = str(auth_mode).strip().casefold()
+        if self.auth_mode not in {"auto", "required", "none"}:
+            raise ValueError("auth_mode must be auto, required, or none")
+        self.subscribe_ack = bool(subscribe_ack)
+        self.on_state = on_state
         self.websocket_kwargs = dict(websocket_kwargs or {})
         self.logger = logger or logging.getLogger(__name__)
         self.protocol = ProtocolConfig.from_mapping(protocol)
@@ -217,6 +230,15 @@ class MCPClient:
         self._authenticated = False
         self._connection_count = 0
         self._last_error: BaseException | None = None
+        self._pending_frames: deque[dict[str, Any]] = deque()
+
+    async def _state(self, name: str, **details: Any) -> None:
+        self.logger.info("MCC WebSocket state=%s details=%s", name, details)
+        if self.on_state is None:
+            return
+        result = self.on_state(name, details)
+        if inspect.isawaitable(result):
+            await result
 
     @property
     def websocket(self) -> Any:
@@ -259,16 +281,30 @@ class MCPClient:
         await self._ws.send(encode_frame(frame))
 
     async def _receive_frame(self) -> dict[str, Any]:
+        if self._pending_frames:
+            return self._pending_frames.popleft()
         if self._ws is None:
             raise MCPClientClosed("MCP client is not connected")
         payload = await self._ws.recv()
         return decode_frame(payload)
 
+    async def _receive_handshake_frame(self) -> dict[str, Any]:
+        if self.auth_timeout is None:
+            return await self._receive_frame()
+        return await asyncio.wait_for(self._receive_frame(), timeout=self.auth_timeout)
+
     async def _authenticate(self) -> None:
+        mode = self.auth_mode
+        if mode == "none" or (mode == "auto" and not str(self.password).strip()):
+            self._authenticated = True
+            await self._state("auth_skipped", password_configured=bool(str(self.password).strip()))
+            return
+        await self._state("authenticating", password_configured=True)
         await self._send_frame(self.protocol.auth_frame(self.password))
-        frame = await self._receive_frame()
+        frame = await self._receive_handshake_frame()
         if _status_is_success(frame, self.protocol):
             self._authenticated = True
+            await self._state("authenticated")
             return
         if _status_is_failure(frame) or frame:
             detail = frame.get("message", frame.get("error", frame.get("status", frame)))
@@ -276,7 +312,21 @@ class MCPClient:
         raise MCPAuthenticationError("MCP authentication returned an empty response")
 
     async def _subscribe(self) -> None:
+        await self._state("subscribing", event=self.protocol.event_name, wait_ack=self.subscribe_ack)
         await self._send_frame(self.protocol.subscribe_frame())
+        if not self.subscribe_ack:
+            return
+        timeout = self.subscribe_timeout
+        if timeout is None:
+            frame = await self._receive_frame()
+        else:
+            frame = await asyncio.wait_for(self._receive_frame(), timeout=timeout)
+        if self.protocol.is_event(frame):
+            self._pending_frames.append(frame)
+            return
+        if _status_is_failure(frame):
+            raise MCPClientError(f"MCP subscription failed: {frame}")
+        await self._state("subscribed")
 
     async def _dispatch(self, parsed: ParsedMessage) -> None:
         callback = self.on_message
@@ -320,14 +370,17 @@ class MCPClient:
                     await self._dispatch(parsed)
 
     async def _run_once(self) -> None:
+        await self._state("connecting", uri=self.uri)
         ws = await self._open()
         self._ws = ws
         self._connection_count += 1
         self._authenticated = False
         self._connected_event.set()
+        await self._state("socket_open", connection_count=self._connection_count)
         try:
             await self._authenticate()
             await self._subscribe()
+            await self._state("ready", authenticated=self._authenticated)
             await self._receive_loop()
         finally:
             self._authenticated = False
@@ -369,16 +422,19 @@ class MCPClient:
                     # stopped.
                     error: BaseException = MCPConnectionError("MCP server closed the connection")
                     self._last_error = error
+                    await self._state("disconnected", reason=str(error))
                 except asyncio.CancelledError:
                     raise
                 except (MCPAuthenticationError, ProtocolDecodeError) as exc:
                     self._last_error = exc
+                    self.logger.warning("MCC WebSocket handshake/protocol failed: %s", exc)
                     if first_attempt and not self.reconnect:
                         raise
                     # Authentication and malformed server frames are normally
                     # recoverable after a server restart/config reload.
                 except (ConnectionClosed, WebSocketException, OSError, EOFError, MCPClientError) as exc:
                     self._last_error = exc
+                    self.logger.warning("MCC WebSocket connection failed: %s", exc)
                     if first_attempt and not self.reconnect:
                         # A normal peer close after the callback has received
                         # the event is a clean test/server shutdown, not an
@@ -400,6 +456,7 @@ class MCPClient:
                         await asyncio.wait_for(self._stop_event.wait(), timeout=delay)
                     except asyncio.TimeoutError:
                         pass
+                await self._state("reconnecting", delay=delay, error=str(self._last_error) if self._last_error else "")
                 delay = min(
                     self.reconnect_max_delay,
                     max(self.reconnect_initial_delay, delay * 2 or self.reconnect_initial_delay),
@@ -407,6 +464,7 @@ class MCPClient:
         finally:
             self._connected_event.clear()
             self._authenticated = False
+            await self._state("stopped")
             self._task = None
 
     async def start(self) -> asyncio.Task[Any]:
